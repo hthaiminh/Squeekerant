@@ -20,6 +20,8 @@ if (!vi && /[ăđơưĂĐƠƯẠ-ỹ]/.test(body)) throw new Error('Vietnamese t
 const out = path.join(root, 'dist', vi ? 'vi' : '');
 fs.mkdirSync(out, { recursive: true });
 fs.writeFileSync(path.join(out, 'artifact.html'), body);
-const page = `<!doctype html>\n<html lang="${vi ? 'vi' : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>\n${body}\n</body></html>\n`;
+// The tab icon, the head chef from the game, stays inside the page so going live is still one file.
+const icon = fs.readFileSync(path.join(root, 'src', 'ui', 'icon.png')).toString('base64');
+const page = `<!doctype html>\n<html lang="${vi ? 'vi' : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="icon" type="image/png" href="data:image/png;base64,${icon}"></head><body>\n${body}\n</body></html>\n`;
 fs.writeFileSync(path.join(out, 'index.html'), page);
 console.log('built', vi ? 'vi' : 'en', Math.round(body.length / 1024) + ' KB');
