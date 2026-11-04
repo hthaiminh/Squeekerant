@@ -1,0 +1,43 @@
+// Serves the built game on this computer only, for trying it before it goes on a domain.
+// `npm start` builds first. Each request reads the file again, so after a rebuild a refresh shows the new game.
+const fs = require('fs');
+const http = require('http');
+const path = require('path');
+const dist = path.join(__dirname, '..', 'dist');
+const PAGES = { '/': 'index.html', '/vi': 'vi/index.html', '/vi/': 'vi/index.html' };
+const LAST_TRY = 10;
+
+const server = http.createServer((req, res) => {
+  const pathname = req.url.split('?')[0];
+  if (pathname === '/favicon.ico') {
+    res.writeHead(204);
+    return res.end();
+  }
+  const page = PAGES[pathname];
+  if (!page) {
+    res.writeHead(404, { 'content-type': 'text/plain' });
+    return res.end('Not found. The game is at / and the Vietnamese test build at /vi/.');
+  }
+  fs.readFile(path.join(dist, page), (err, html) => {
+    if (err) {
+      res.writeHead(500, { 'content-type': 'text/plain' });
+      return res.end('Build the game first: npm run build && npm run build:vi');
+    }
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(html);
+  });
+});
+
+const first = Number(process.env.PORT) || 3000;
+let port = first;
+server.on('error', (err) => {
+  if (err.code !== 'EADDRINUSE' || port >= first + LAST_TRY) throw err;
+  server.listen(++port, '127.0.0.1');
+});
+server.on('listening', () => {
+  console.log('\nSqueekerant is running on this computer:');
+  console.log(`  Vietnamese test build  http://localhost:${port}/vi/`);
+  console.log(`  English public build   http://localhost:${port}/`);
+  console.log('Press Ctrl+C to stop.\n');
+});
+server.listen(port, '127.0.0.1');

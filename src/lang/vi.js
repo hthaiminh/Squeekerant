@@ -1,0 +1,696 @@
+// The Vietnamese test build. Only `node scripts/build.js vi` includes this file, the English build never sees it.
+// Names and notes in the data tables are replaced once at load. Everything else is translated where it is shown, through WW.tr.
+(function (WW) {
+  const DATA = {
+    FLAVOURS: { sweet: 'Ngọt', tangy: 'Chua', fresh: 'Tươi', earthy: 'Mộc', nutty: 'Bùi', savory: 'Đậm' },
+    RARITY: { c: 'Thường', u: 'Ít gặp', r: 'Hiếm', e: 'Cực hiếm', l: 'Huyền thoại' },
+    FURS: { golden: 'Vàng', cream: 'Kem', cinnamon: 'Quế', grey: 'Xám Bồ Câu', choc: 'Sô Cô La', black: 'Gấu Đen', white: 'Tuyết', squeek: 'Trắng Cam', rust: 'Đai Nâu Đỏ', panda: 'Gấu Trúc' },
+    HATS: { toque: 'Mũ Đầu Bếp', tall: 'Mũ Đầu Bếp Cao', beret: 'Mũ Nồi', bandana: 'Khăn Đỏ', thimble: 'Mũ Đê May', acorn: 'Mũ Hạt Sồi', flower: 'Hoa Cúc', crown: 'Vương Miện Nắp Chai', none: 'Không Mũ' },
+  };
+  const INGREDIENTS = {
+    romaine: ['Xà Lách Romaine', 'Chỉ romaine, không bao giờ dùng xà lách búp.'],
+    cucumber: ['Dưa Leo', 'Một lát mỏng đã rửa.'],
+    parsley: ['Mùi Tây', 'Một nhánh nhỏ đã rửa.'],
+    basil: ['Húng Quế', 'Một lá nhỏ đã rửa.'],
+    dandelion: ['Bồ Công Anh', 'Lá sạch, tuyệt đối không hái ở bãi cỏ phun thuốc.'],
+    carrot: ['Cà Rốt', 'Thỉnh thoảng mới cho, cà rốt nhiều đường.'],
+    peas: ['Đậu Hà Lan', 'Một ít thôi.'],
+    oats: ['Yến Mạch Cán', 'Loại cán dẹt, hạt nguyên có thể làm đau túi má.'],
+    broccoli: ['Bông Cải Xanh', 'Một miếng nhỏ đã rửa.'],
+    zucchini: ['Bí Ngòi', 'Một lát nhỏ đã rửa.'],
+    sweetpotato: ['Khoai Lang', 'Chỉ khoai lang, khoai tây thường không an toàn.'],
+    parsnip: ['Củ Cải Vàng', 'Sống hoặc chín, để nguyên vị.'],
+    beans: ['Đậu Que', 'Sống hoặc chín sơ, để nguyên vị.'],
+    pepper: ['Ớt Chuông', 'Chỉ ớt ngọt, không bao giờ dùng ớt cay.'],
+    millet: ['Hạt Kê', 'Món thưởng nhỏ, không phải bữa chính.'],
+    cauliflower: ['Bông Cải Trắng', 'Chỉ phần bông, không dùng lá.'],
+    apple: ['Táo', 'Bỏ hạt, hạt táo có độc.'],
+    pear: ['Lê', 'Bỏ hạt, hạt lê có độc.'],
+    strawberry: ['Dâu Tây', 'Một miếng tí xíu đã rửa.'],
+    blueberry: ['Việt Quất', 'Một miếng tí xíu đã rửa.'],
+    blackberry: ['Mâm Xôi Đen', 'Một miếng tí xíu đã rửa.'],
+    peach: ['Đào', 'Bỏ hột, hột đào có độc.'],
+    mango: ['Xoài', 'Một miếng tí xíu, không có hột.'],
+    banana: ['Chuối', 'Một miếng tí xíu, chuối nhiều đường.'],
+    watermelon: ['Dưa Hấu', 'Một miếng tí xíu, không vỏ không hạt.'],
+    sunflower: ['Hạt Hướng Dương', 'Để nguyên vị, không muối, thỉnh thoảng mới cho.'],
+    pumpkinseed: ['Hạt Bí', 'Để nguyên vị, không muối, thỉnh thoảng mới cho.'],
+    tofu: ['Đậu Hũ', 'Để nguyên vị, một lượng rất nhỏ.'],
+    mealworm: ['Sâu Bột Khô', 'Loại sấy khô, mỗi lần một hai con.'],
+    egg: ['Trứng Luộc', 'Để nguyên vị, một lượng rất nhỏ.'],
+    chicken: ['Gà Luộc', 'Nấu chín, không nêm, một lượng rất nhỏ.'],
+  };
+  const DISHES = {
+    carrot_coins: 'Xu Cà Rốt', cucumber_boats: 'Thuyền Dưa Leo', pea_pancakes: 'Bánh Kếp Đậu', romaine_wraps: 'Cuốn Xà Lách', oat_biscuits: 'Bánh Quy Yến Mạch', basil_bites: 'Viên Húng Quế', melon_cubes: 'Dưa Hấu Hạt Lựu', millet_cakes: 'Bánh Hạt Kê', sweet_chips: 'Khoai Lang Lát', banana_coins: 'Xu Chuối', mango_mash: 'Xoài Nghiền', apple_crisp: 'Táo Giòn', berry_tart: 'Bánh Tart Dâu Rừng', peach_pockets: 'Bánh Túi Đào', seed_bar: 'Thanh Hạt Không Đường', egg_toast: 'Trứng Trên Bánh Yến Mạch',
+    tossed_peas: 'Đậu Xóc Chảo', seared_romaine: 'Xà Lách Áp Chảo', courgette_ribbons: 'Bí Ngòi Sợi', bean_fry: 'Đậu Que Xào', broccoli_toss: 'Bông Cải Xóc Chảo', pepper_stir: 'Ớt Chuông Xào', cauli_steaks: 'Bít Tết Bông Cải', seared_tofu: 'Đậu Hũ Áp Chảo', egg_ribbons: 'Trứng Sợi Xào', worm_crunch: 'Sâu Bột Giòn', chicken_toss: 'Gà Xóc Chảo', full_wheel: 'Xào Trọn Vòng Quay',
+    oat_porridge: 'Cháo Yến Mạch', carrot_soup: 'Súp Cà Rốt', sweet_mash: 'Khoai Lang Nghiền', sleepy_stew: 'Món Hầm Buồn Ngủ', millet_congee: 'Cháo Hạt Kê', green_bean_pot: 'Nồi Đậu Que', pear_compote: 'Lê Hầm Ánh Trăng', steamed_egg: 'Trứng Hấp', broccoli_soup: 'Súp Bông Cải', apple_spread: 'Mứt Táo Nấu Chậm', blackberry_jam: 'Mứt Mâm Xôi Không Đường', tofu_soup: 'Canh Đậu Hũ Non', chicken_broth: 'Nước Dùng Gà', hundred_stew: 'Món Hầm Trăm Round',
+  };
+  const DREAMS = ['Yến Mạch Mây', 'Lê Ánh Trăng', 'Kê Bụi Sao', 'Há Cảo Gối Êm', 'Tô Dâu Nửa Đêm', 'Súp Tiếng Ngáy', 'Cháo Tổ Ấm', 'Giấc Mơ Cà Rốt Cuộn', 'Đậu Hũ Lông Vũ', 'Nước Dùng Ru Ngủ', 'Gỏi Mộng Du', 'Bánh Bao Ngáp', 'Bánh Ngủ Trưa', 'Cuốn Chăn Ấm', 'Xào Râu Giật Giật', 'Đào Say Giấc', 'Cốc Việt Quất Lim Dim', 'Bông Cải Tuyết Mềm', 'Lẩu Ngủ Đông', 'Xoài Phương Xa', 'Món Hầm Hang Ấm', 'Hạt Sao Băng', 'Lại Giấc Mơ Cũ', 'Bánh Xe Ngừng Quay'];
+  const SHOPS = { mochi: 'Nhà Vụn Bánh Của Mochi', biscuit: 'Hộp Bánh Quy', pepper: 'Pepper Và Các Con', noodle: 'Góc Mì', tofu: 'Bàn Đậu Hũ Non', pickle: 'Hũ Dưa Muối', truffle: 'Truffle Dưới Gầm Thang', clementine: 'Quán Clementine', pudding: 'Hẻm Pudding', olive: 'Cành Ô Liu' };
+  const STYLES = {
+    wall: { teal: 'Sọc Xanh Ngọc', rose: 'Sọc Hồng', mustard: 'Giấy Vàng Mù Tạt', mint: 'Ca Rô Bạc Hà', plum: 'Nhung Tím', brick: 'Gạch Cũ', sky: 'Trời Mây', night: 'Đêm Sao' },
+    floor: { oak: 'Ván Sồi', birch: 'Ván Bạch Dương', walnut: 'Ván Óc Chó', check: 'Thảm Nhựa Ca Rô Đỏ', mono: 'Gạch Đen Trắng', terrazzo: 'Đá Mài', moss: 'Thảm Rêu', royal: 'Thảm Hoàng Gia' },
+    kitchen: { cream: 'Ca Rô Kem', mono: 'Gạch Quán Ăn', terracotta: 'Gạch Nung', blue: 'Gạch Xanh', steel: 'Tấm Thép' },
+  };
+  const KINDS = { table: 'Bàn', seat: 'Ghế', rug: 'Thảm', plant: 'Cây', light: 'Đèn', appliance: 'Đồ bếp', clean: 'Dọn dẹp', fun: 'Giải trí', attract: 'Cho khách nhút nhát', prestige: 'Đẳng cấp', yard: 'Sân vườn' };
+  const PREP = {
+    cook: 'Nấu một món trên bếp lò', tree: 'Rung cái cây ngoài cửa', quiz: 'Trả lời câu hỏi mỗi ngày trên bảng tin', pot: 'Bắc một nồi hầm', wok: 'Chuẩn bị chảo để nó bốc lửa khi cậu ấy chạy', market: 'Mua một nguyên liệu ở chợ', trade: 'Đổi một nguyên liệu với hàng xóm', shelf: 'Treo một món lên kệ đổi hàng', visit: 'Sang nhà một hàng xóm ở Phố Chân Tường', neighbour_clean: 'Lau một chỗ dơ trên sàn nhà hàng xóm', first_guest: 'Phục vụ 25 khách', seat: 'Mua và đặt một món đồ mới', order: 'Giao một đơn tiệc trên bảng tin', experiment: 'Thử một công thức mới ở Bếp Thử', lunch: 'Gói một hộp cơm', line: 'Chơi một lượt Bàn Xoay', hire: 'Thuê một hamster hàng xóm', expand: 'Mở rộng phòng', style: 'Chọn tường hoặc sàn mới', dream: 'Nấu một Món Trong Mơ', book10: 'Gặp 10 loài khách', upgrade: 'Nâng cấp một công thức', book25: 'Gặp 25 loài khách', attract: 'Đặt món đồ khách nhút nhát tìm kiếm', gear: 'Đặt một món đồ bếp', critic: 'Sống sót qua chuyến thăm của Ngài Nhai Chậm', book50: 'Gặp 50 loài khách', book100: 'Gặp 100 loài khách', yard: 'Đặt một món ngoài sân', exterior: 'Đổi diện mạo bên ngoài nhà hàng',
+  };
+  const SEASONS = { spring: 'Mùa Xuân', summer: 'Mùa Hạ', autumn: 'Mùa Thu', winter: 'Mùa Đông' };
+  const WEATHER = { clear: 'Trời Quang', cloudy: 'Nhiều Mây', rain: 'Mưa', storm: 'Bão', fog: 'Sương Mù', snow: 'Tuyết', petals: 'Cánh Hoa Rơi', leaves: 'Lá Rơi' };
+  const EXTERIOR = {
+    wall: { plaster: 'Vữa Kem', felt: 'Nỉ Vẽ Hoa Văn', clapboard: 'Ván Trắng', planks: 'Ván Sơn', earth: 'Đất Vẽ Hoa Văn', rose: 'Ván Hồng', logs: 'Nhà Gỗ Súc', alpine: 'Gỗ Trên Nền Đá', tudor: 'Khung Gỗ Lộ', brick: 'Gạch Đỏ', hanok: 'Tường Trắng Cột Sẫm', lattice: 'Mành Gỗ Sẫm', stone: 'Đá Suối', mustard: 'Vàng Phố Cổ', whitewash: 'Vôi Trắng Miền Đảo', adobe: 'Đất Nung Ấm', sandstone: 'Sa Thạch Khảm', staves: 'Ván Quét Hắc Ín', kremlin: 'Gạch Đỏ Vòm Trắng', lacquer: 'Cột Sơn Son', blocks: 'Đá Lâu Đài', marble: 'Cẩm Thạch Khảm', goldleaf: 'Dát Vàng' },
+    roof: { thatch: 'Mái Rơm', felt: 'Vòm Nỉ', red: 'Ngói Đỏ', shingle: 'Ngói Gỗ Xám', blue: 'Đá Phiến Xanh', deep: 'Rơm Dày', moss: 'Ngói Rêu', wide: 'Mái Rộng Chạm Khắc', steep: 'Ngói Nâu Dốc', giwa: 'Ngói Cong Xám', oldtile: 'Ngói Cổ Phủ Rêu', terrace: 'Sân Thượng Lan Can', barrel: 'Ngói Ống Đất Nung', gold: 'Ngói Mạ Vàng', stepped: 'Đầu Hồi Bậc Thang', battlement: 'Tường Răng Cưa', greentile: 'Chóp Ngói Xanh Men', tarred: 'Mái Đầu Rồng', temple: 'Mái Chùa Nhiều Tầng', pavilion: 'Mái Đình Uốn Cong', golden: 'Mái Men Vàng' },
+    crown: { none: 'Không Có Gì', vane: 'Chong Chóng Gió', chimney: 'Ống Khói', dormer: 'Cửa Sổ Mái', bell: 'Tháp Chuông Nhỏ', dome: 'Vòm Xanh', turret: 'Tháp Đồng Hồ', hall: 'Lầu Trên', spire: 'Chóp Vàng', tiers: 'Tầng Mái Chồng', goldhall: 'Lầu Vàng', keep: 'Tháp Lâu Đài', onions: 'Vòm Củ Hành', whitedome: 'Vòm Trắng Lớn', phoenix: 'Lầu Phượng Hoàng' },
+    awning: { none: 'Không Mái Hiên', red: 'Sọc Đỏ', blue: 'Sọc Xanh Dương', green: 'Sọc Xanh Lá', scallop: 'Bạt Viền Sóng', porch: 'Hiên Trước', skirt: 'Mái Ngói Phụ', gold: 'Vàng Và Tím', frieze: 'Diềm Vẽ Màu', arcade: 'Dãy Vòm', silk: 'Mái Lụa', brackets: 'Đấu Củng Mạ Vàng' },
+    windows: { pane: 'Kính Thường', white: 'Khung Trắng', shutters: 'Chớp Xanh Lá', round: 'Cửa Tròn', diamond: 'Kính Ô Trám', paper: 'Song Giấy', louvre: 'Chớp Xanh Ngọc', woodarch: 'Vòm Gỗ', bluearch: 'Vòm Xanh', keyhole: 'Mành Chạm', goldlattice: 'Song Vàng', templearch: 'Vòm Chùa', inlaid: 'Vòm Khảm', stained: 'Kính Màu' },
+    door: { plank: 'Cửa Ván', blue: 'Cửa Xanh', painted: 'Cửa Cam Vẽ', green: 'Cửa Xanh Lá', teal: 'Cửa Xanh Ngọc', paperdoor: 'Cửa Lùa Giấy', noren: 'Rèm Cửa', wood: 'Cửa Sồi Vòm', bluearch: 'Cửa Vòm Xanh', horseshoe: 'Vòm Móng Ngựa', portcullis: 'Cổng Lưới Sắt', studded: 'Cửa Son Đinh Vàng', goldarch: 'Vòm Vàng' },
+    base: { none: 'Đất Trống', fieldstone: 'Chân Đá', deck: 'Sàn Gỗ', tile: 'Viền Gạch Vẽ', water: 'Mặt Nước', marble: 'Thềm Cẩm Thạch', giltmarble: 'Thềm Mạ Vàng' },
+    balcony: { none: 'Không Ban Công', flowers: 'Ban Công Hoa', wood: 'Ban Công Gỗ Chạm', iron: 'Ban Công Sắt', blue: 'Ban Công Xanh', gallery: 'Hành Lang Vàng' },
+    towers: { none: 'Không Có Gì', bamboo: 'Bụi Tre', palms: 'Chậu Cọ', belltower: 'Tháp Chuông', round: 'Tháp Đá Tròn', minarets: 'Tháp Mảnh', onion: 'Tháp Củ Hành', pagoda: 'Tháp Chùa' },
+    trim: { none: 'Trơn', flowers: 'Hộp Hoa Cửa Sổ', ivy: 'Dây Thường Xuân', lights: 'Dây Đèn', banner: 'Cờ Lễ Hội', silk: 'Đèn Lồng Lụa', paperflags: 'Cờ Giấy', vines: 'Hoa Giấy', redlanterns: 'Đèn Lồng Đỏ', garlands: 'Dây Hoa Mạ Vàng' },
+    sign: { none: 'Không Biển', board: 'Bảng Sơn', hanging: 'Biển Treo', neon: 'Biển Neon', banner: 'Cờ Dài', plaque: 'Biển Vàng', marquee: 'Biển Bóng Đèn' },
+  };
+  const DECOR = {
+    spool_red: ['Bàn Cuộn Chỉ Đỏ', 'Một cuộn chỉ lấy từ hộp kim chỉ.'], spool_blue: ['Bàn Cuộn Chỉ Xanh Dương'], spool_green: ['Bàn Cuộn Chỉ Xanh Lá'], cap_table: ['Bàn Nắp Chai'], jar_lid: ['Bàn Nắp Hũ Mứt'], block_table: ['Bàn Khối Đồ Chơi'], matchbox: ['Bàn Hộp Diêm'], domino: ['Bàn Domino'], card_table: ['Bàn Lá Bài'], brick_table: ['Bàn Gạch Đồ Chơi'], tin_table: ['Bàn Hộp Bánh Thiếc'], tea_chest: ['Bàn Rương Trà'], tile_table: ['Bàn Gạch Vẽ'],
+    cork: ['Ghế Nút Bần'], button_stool: ['Ghế Cúc Áo'], eraser: ['Ghế Cục Tẩy'], thimble_stool: ['Ghế Đê May'], acorn_stool: ['Ghế Hạt Sồi'], clothespin: ['Ghế Kẹp Phơi Đồ'], pin_cushion: ['Ghế Gối Cắm Kim'], sock_pouf: ['Ghế Lười Bít Tất'], sponge: ['Sofa Mút Rửa Chén'], ruler_bench: ['Băng Ghế Thước Kẻ'], match_bench: ['Băng Ghế Que Diêm'], ring_box: ['Ngai Hộp Nhẫn'],
+    stamp_rug: ['Thảm Tem Thư'], teabag: ['Thảm Túi Trà'], coaster: ['Thảm Lót Ly Nỉ'], leaf_rug: ['Thảm Lá To'], gingham: ['Khăn Ca Rô'], doily: ['Khăn Ren'], bandana: ['Thảm Khăn Đỏ'], bubble_mat: ['Thảm Xốp Hơi'], card_rug: ['Thảm Đầm Cơ'], silk_scarf: ['Thảm Khăn Lụa'],
+    thimble_cactus: ['Xương Rồng Đê May'], teacup_fern: ['Dương Xỉ Tách Trà'], carrot_pot: ['Chậu Ngọn Cà Rốt'], clover: ['Cỏ Bốn Lá'], mushrooms: ['Vạt Nấm'], pine_cone: ['Cây Quả Thông'], broccoli_bonsai: ['Bonsai Bông Cải'], sunflower_cup: ['Hướng Dương Trong Cốc'], ivy_frame: ['Khung Tranh Thường Xuân'], palm: ['Cọ Đê May'], bonsai: ['Bonsai Cổ'],
+    candle: ['Nến Trên Đồng Xu'], match_lamp: ['Đèn Que Diêm'], firefly_jar: ['Hũ Đom Đóm'], paper_lantern: ['Lồng Đèn Giấy'], fairy_post: ['Cột Đèn Nháy'], nightlight: ['Đèn Ngủ Mặt Trăng'], lava_lamp: ['Đèn Dung Nham'], street_lamp: ['Đèn Đường Tí Hon'], neon: ['Biển Neon OPEN'], disco: ['Quả Cầu Disco'],
+    tip_jar: ['Hũ Tiền Tip'], kettle: ['Ấm Đun Tí Hon'], toaster: ['Máy Nướng Bánh'], spice_rack: ['Kệ Gia Vị'], hand_mill: ['Cối Xay Tay'], microwave: ['Lò Vi Sóng Đồ Chơi'], fridge: ['Tủ Lạnh Mini', 'Giữ rau luôn giòn.'], gumball: ['Máy Kẹo Cao Su'], blender: ['Máy Xay Sinh Tố'], dishwasher: ['Máy Rửa Chén', 'Chén sạch, bàn quay vòng nhanh.'], rice_cooker: ['Nồi Cơm Điện'], air_fryer: ['Nồi Chiên Không Dầu'], oven: ['Lò Nướng Đồ Chơi'], mixer: ['Máy Trộn Đứng'], coffee: ['Máy Pha Espresso', 'Chỉ dành cho phục vụ. Ngoài đời không ai cho hamster uống thứ này.'], water_cooler: ['Bình Nước Mát'], register: ['Máy Tính Tiền'], freezer: ['Tủ Đông Nằm'], vending: ['Máy Bán Hàng Tự Động'], ice_cart: ['Xe Trái Cây Đông Lạnh'],
+    trash_bin: ['Thùng Rác Tí Hon'], broom_stand: ['Giá Treo Chổi'], mop_bucket: ['Cây Lau Và Xô'], recycle: ['Thùng Tái Chế'], sink: ['Bồn Rửa Tay'], vacuum: ['Máy Hút Bụi Đứng'], robot_mop: ['Robot Lau Nhà', 'Tự rời trạm sạc và đi lau khắp sàn.'], washer: ['Máy Giặt'], floor_washer: ['Máy Chà Sàn', 'Lựa chọn nghiêm túc.'],
+    radio: ['Radio Bỏ Túi'], seesaw: ['Bập Bênh Thước Kẻ'], slide: ['Cầu Trượt Thìa'], globe: ['Quả Địa Cầu Bi'], swing: ['Xích Đu Kẹp Giấy'], music_box: ['Hộp Nhạc'], tv: ['TV Cũ'], bookshelf: ['Kệ Sách Tí Hon'], tubes: ['Mê Cung Ống Hamster'], piano: ['Đàn Piano Đồ Chơi'], white_noise: ['Hộp Tiếng Ồn Trắng', 'Để người chơi thư giãn, hamster thật không bao giờ nghe thấy.'], jukebox: ['Máy Hát Tự Động'], arcade: ['Máy Điện Tử Thùng'], pinball: ['Bàn Pinball'], foosball: ['Bàn Bi Lắc'], dream_catcher: ['Lưới Bắt Giấc Mơ'], telescope: ['Kính Viễn Vọng Đồng', 'Phát hiện khách hiếm từ xa.'], pool_table: ['Bàn Bi A'],
+    yarn: ['Cuộn Len', 'Mèo con mất hết tự chủ.'], moss_cork: ['Nút Bần Phủ Rêu', 'Bọ, ốc sên và nai thích ở đây.'], hay_bale: ['Bó Cỏ Khô', 'Ngựa con và dê con đến gặm.'], pencil_perch: ['Cành Đậu Bút Chì', 'Chim hót không chịu đậu chỗ nào khác.'], honey_spoon: ['Thìa Mật Ong', 'Ong và bướm theo mùi mà tới.'], book_stack: ['Chồng Sổ Tem', 'Cú đã đọc hết rồi.'], sock_burrow: ['Hang Bít Tất Lẻ', 'Chuột sóc ngủ ngon hơn trong này.'], sand_tin: ['Hộp Tắm Cát', 'Khách sa mạc cần tắm bụi trước đã.'], bamboo: ['Tre Que Xiên', 'Gấu trúc và gấu túi đi tìm thứ này.'], sun_lamp: ['Đèn Mặt Trời Bóng Tròn', 'Thằn lằn và tắc kè hoa phơi nắng ở đây.'], saucer_pond: ['Ao Đĩa Lót', 'Ai sống dưới nước cũng hỏi thăm.'], flower_pot: ['Chậu Hoa Tổ Ong'], marble_run: ['Đường Lăn Bi', 'Voi bỏ túi chưa từng thấy gì hay đến vậy.'], log_pile: ['Đống Củi Cành Con'], tissue_cave: ['Hang Hộp Khăn Giấy'], bird_swing: ['Xích Đu Chim'], cactus_garden: ['Vườn Cát Xương Rồng'], heat_rock: ['Đá Sưởi Ấm'], hay_cart: ['Xe Cỏ Khô'], cat_tree: ['Cây Cho Mèo'], reading_nook: ['Góc Đọc Sách'], aquarium: ['Bể Cá Hũ Mứt'], ball_pit: ['Hồ Bóng Hạt Cườm'],
+    pawn: ['Tượng Tốt Cờ Vua'], watch: ['Đồng Hồ Quả Quýt'], mini_wheel: ['Mô Hình Bánh Xe Nhỏ'], teapot_fountain: ['Đài Phun Ấm Trà'], chef_statue: ['Tượng Bếp Vàng'], chandelier: ['Đèn Chùm Kẹp Giấy'], grand_clock: ['Đồng Hồ Quả Lắc'], rocket: ['Tên Lửa Đồ Chơi'], gold_wheel: ['Đài Bánh Xe Vàng'], castle: ['Lâu Đài Đồ Chơi'], crystal: ['Tinh Thể Đường Khổng Lồ', 'Chỉ để trang trí. Ở đây không ai ăn đường.'], bunting: ['Cờ Dây Lễ Hội', 'Chỉ có khi đạt mốc quãng đường.'],
+    stepping_stones: ['Đá Lót Lối'], daisy_patch: ['Luống Cúc'], mushroom_ring: ['Vòng Nấm'], arrow_sign: ['Biển Chỉ Đường'], tulip_bed: ['Luống Tulip'], picket_fence: ['Hàng Rào Gỗ'], windmill: ['Chong Chóng Giấy'], lantern_post: ['Cột Đèn Lồng'], bird_bath: ['Bồn Tắm Chim'], garden_bench: ['Ghế Vườn'], wind_chime: ['Chuông Gió'], scarecrow: ['Bù Nhìn Thân Thiện'], chalk_menu: ['Bảng Thực Đơn Phấn'], sunflower_row: ['Hàng Hướng Dương'], topiary: ['Thỏ Cây Tỉa'], rose_arch: ['Cổng Hoa Hồng'], stone_lantern: ['Đèn Đá'], picnic_table: ['Bàn Dã Ngoại'], koi_pond: ['Hồ Cá Koi'], fountain: ['Đài Phun Đá'], gazebo: ['Chòi Nghỉ Nhỏ'], wheel_statue: ['Tượng Bánh Xe Lớn'], balloon: ['Khinh Khí Cầu Neo'], clock_tower: ['Tháp Đồng Hồ Tí Hon'],
+    nonla: ['Nón Lá Trên Cọc'], cactus: ['Xương Rồng Saguaro'], clogs: ['Guốc Gỗ Khổng Lồ'], rocking_chair: ['Ghế Bập Bênh'], matryoshka: ['Búp Bê Nga'], jangdok: ['Hũ Kimchi'], maneki: ['Mèo Thần Tài'], phone_box: ['Bốt Điện Thoại Đỏ'], jangseung: ['Cột Thần Làng Hàn'], lantern_frame: ['Đèn Lồng Lụa'], spirit_house: ['Miếu Thần Thái'], vespa: ['Xe Máy Nhỏ'], zen_garden: ['Vườn Đá Thiền'], moai: ['Tượng Moai'], torii: ['Cổng Torii Đỏ'], moon_gate: ['Cổng Trăng'], lotus_pond: ['Ao Sen'], arch_bridge: ['Cầu Vòm Đỏ'], dutch_mill: ['Cối Xay Gió Hà Lan'], liberty: ['Tượng Nữ Thần Tự Do Nhỏ'], pisa: ['Tháp Nghiêng'], pagoda_mini: ['Tháp Năm Tầng'], dragon: ['Rồng Vàng'], sphinx: ['Nhân Sư Nhỏ'], eiffel: ['Tháp Eiffel'], pyramid: ['Đại Kim Tự Tháp'], carousel: ['Vòng Quay Ngựa Gỗ'], ferris_wheel: ['Vòng Đu Quay'],
+    dust_bunny: ['Cục Bụi', 'Nằm dưới bếp từ lâu. Nó đang nhìn bạn.'], bent_pin: ['Ghim Cong', 'Chẳng ai cần thứ này.'], odd_button: ['Cúc Áo Lẻ', 'Từ một chiếc áo chẳng ai nhớ.'], lint_ball: ['Cục Xơ Vải', 'Mềm, xám và chẳng để làm gì.'], rubber_band: ['Dây Thun Đứt', 'Đã cống hiến hết mình.'], receipt: ['Hóa Đơn Cũ', 'Có người từng mua mười một hạt đậu.'], pencil_stub: ['Mẩu Bút Chì', 'Quá ngắn để cầm, quá dài để vứt.'], paper_clip: ['Kẹp Giấy Cong', 'Nó từng mơ làm đèn chùm.'],
+    lucky_coin: ['Đồng Xu May Mắn', 'Ai đó đánh rơi từ lâu. Đáng giữ, hoặc đáng bán.'], pearl_button: ['Cúc Ngọc Trai', 'Sáng như một mặt trăng nhỏ.'], old_key: ['Chìa Khóa Đồng Cũ', 'Chẳng ai biết nó mở gì. Ai cũng muốn có.'], silver_spoon: ['Thìa Bạc', 'Tự đứng được. Rất tự hào về điều đó.'], tiny_ruby: ['Hồng Ngọc Từ Chiếc Nhẫn Lạc', 'Nằm trong đám lá từ bao giờ.'], gold_thimble: ['Đê May Vàng', 'Món đồ quý nhất phố.'],
+  };
+  const ANIMALS = {
+    field_mouse: ['Chuột Đồng', 'Ăn đúng một vụn bánh rồi đòi tính tiền.'],
+    house_mouse: ['Chuột Nhà', 'Biết mọi lối tắt sau chân tường.'],
+    harvest_mouse: ['Chuột Lúa', 'Nhỏ đến mức ngồi vừa trên một hạt đậu.'],
+    bank_vole: ['Chuột Bờ Đê', 'Thích bàn gần lối ra.'],
+    shrew: ['Chuột Chù Lùn', 'Hai tiếng không ăn là nổi cáu.'],
+    gerbil: ['Chuột Nhảy Gerbil', 'Đào một đường hầm nhỏ dưới khăn trải bàn.'],
+    dwarf_hamster: ['Hamster Lùn', 'Giấu nửa bữa ăn vào má để dành.'],
+    guinea_pig: ['Chuột Lang', 'Kêu ầm lên khi salad được mang ra.'],
+    fancy_rat: ['Chuột Cảnh', 'Đọc hết thực đơn, hai lần.'],
+    sparrow: ['Chim Sẻ', 'Dẫn theo sáu đứa bạn với ngân sách một vụn bánh.'],
+    robin: ['Chim Cổ Đỏ', 'Nhất định đòi ngồi cạnh cửa sổ.'],
+    chick: ['Gà Con', 'Ngủ gật trong tô súp. Hai lần rồi.'],
+    duckling: ['Vịt Con', 'Đi theo người phục vụ đầu tiên nó thấy.'],
+    pigeon: ['Bồ Câu', 'Ngày nào cũng tìm được đường quay lại.'],
+    goldfinch: ['Sẻ Vàng', 'Hót giữa các món.'],
+    wren: ['Chim Hồng Tước', 'Chim bé tí, ý kiến to đùng.'],
+    red_ant: ['Kiến Đỏ', 'Bê luôn cái đĩa về nhà.'],
+    black_ant: ['Kiến Đen', 'Đến theo một hàng cực kỳ ngay ngắn.'],
+    ladybug: ['Bọ Rùa', 'Đếm chấm trên lưng rồi mới gọi món.'],
+    pillbug: ['Bọ Cuộn', 'Cuộn tròn lại khi hóa đơn tới.'],
+    dung_beetle: ['Bọ Hung', 'Tự mang quả cầu riêng. Xin đừng hỏi.'],
+    earthworm: ['Giun Đất', 'Không đọc được thực đơn. Gọi món theo mùi.'],
+    caterpillar: ['Sâu Bướm', 'Rất đói. Bạn biết kiểu đó rồi đấy.'],
+    garden_snail: ['Ốc Sên Vườn', 'Đặt bàn này từ thứ Ba tuần trước.'],
+    slug: ['Sên Trần', 'Để lại một lời khen bóng loáng trên sàn.'],
+    cricket: ['Dế', 'Chơi nhạc kiếm tip.'],
+    grasshopper: ['Châu Chấu', 'Ăn xong trước khi bạn kịp quay lại.'],
+    tree_frog: ['Nhái Bén', 'Dính lên tường trong lúc chờ.'],
+    toad: ['Cóc', 'Chưa từng vội lần nào.'],
+    newt: ['Sa Giông Đốm', 'Cơn đói cũng mọc lại được.'],
+    gecko: ['Tắc Kè', 'Liếm mắt mình sau món tráng miệng.'],
+    rabbit_kit: ['Thỏ Con', 'Gọi cà rốt, được cà rốt, vui hết cỡ.'],
+    chipmunk: ['Sóc Chuột', 'Má đầy rồi. Vẫn gọi thêm.'],
+    squirrel: ['Sóc Đỏ', 'Giấu tiền tip đâu đó rồi quên mất.'],
+    hedgehog: ['Nhím Con', 'Xin đừng vuốt ve khách.'],
+    mole: ['Chuột Chũi', 'Chấm điểm món ăn bằng xúc giác.'],
+    lemming: ['Chuột Lemming', 'Ai đi đâu là đi theo đó.'],
+    kitten: ['Mèo Mướp Con', 'Bàn nào cũng gạt rơi một cái thìa.'],
+    puppy: ['Cún Con', 'Yêu nhà hàng này hơn mọi thứ trên đời.'],
+    piglet: ['Heo Con', 'Liếm sạch đĩa mình, rồi tới đĩa bạn.'],
+    lamb: ['Cừu Non', 'Món nào cũng khen đúng một câu.'],
+    calf: ['Bê Con', 'Mỗi miếng nhai bốn mươi lần.'],
+    gosling: ['Ngỗng Con', 'Kêu quạc vào tô súp. Đáng đời nó.'],
+    bumblebee: ['Ong Nghệ', 'Lẽ ra không bay được. Vẫn tip hậu hĩnh.'],
+    housefly: ['Ruồi Nhà', 'Về lý thuyết là vấn đề vệ sinh. Trả đủ tiền.'],
+    mayfly: ['Phù Du', 'Chỉ có một ngày. Dành trọn ở đây.'],
+    tadpole: ['Nòng Nọc', 'Sẽ quay lại khi có chân.'],
+    fox_kit: ['Cáo Con', 'Khăng khăng món gà là ý tưởng của mình.'],
+    wolf_pup: ['Sói Con', 'Hú lên khi bị dọn đĩa.'],
+    raccoon: ['Gấu Mèo Con', 'Rửa từng miếng một. Đeo mặt nạ đi ăn tối.'],
+    skunk: ['Chồn Hôi Con', 'Rất lịch sự. Ai cũng rất lịch sự lại.'],
+    ferret: ['Chồn Sương', 'Lấy trộm một cái thìa. Trả lại cái thìa khác.'],
+    weasel: ['Chồn Tí Hon', 'Biến mất trước khi đĩa chạm bàn.'],
+    stoat: ['Chồn Ecmin', 'Đổi áo theo mùa, giữ nguyên món gọi.'],
+    otter: ['Rái Cá Con', 'Đập bát óc chó trên bụng mình.'],
+    badger: ['Lửng Con', 'Món hầm chưa nóng thì chưa nhúc nhích.'],
+    beaver: ['Hải Ly Con', 'Cứ sắp xếp lại bàn của bạn.'],
+    marmot: ['Sóc Đất Marmot', 'Huýt sáo khi phục vụ đi tới.'],
+    prairie_dog: ['Cầy Thảo Nguyên', 'Đứng thẳng lên ngó hàng xóm.'],
+    meerkat: ['Cầy Meerkat', 'Ăn tối vẫn luôn có một đứa đứng gác.'],
+    chinchilla: ['Sóc Chinchilla', 'Phải tắm bụi trước món tráng miệng.'],
+    degu: ['Chuột Degu', 'Nói chuyện suốt bữa.'],
+    jerboa: ['Chuột Nhảy Jerboa', 'Nhảy. Chỉ có nhảy. Coi chừng tô súp.'],
+    pika: ['Thỏ Pika', 'Phơi hoa cho mùa đông trên bệ cửa sổ nhà bạn.'],
+    hare: ['Thỏ Rừng Con', 'Đang trễ việc gì đó. Ăn rất nhanh.'],
+    kingfisher: ['Bói Cá', 'Lao xuống tô súp từ trần nhà.'],
+    woodpecker: ['Gõ Kiến', 'Gõ bàn để gọi phục vụ.'],
+    budgie: ['Vẹt Yến Phụng', 'Nhắc lại món đặc biệt cho cả quán nghe.'],
+    canary: ['Hoàng Yến', 'Hót để đổi thêm một quả việt quất.'],
+    cockatiel: ['Vẹt Mào', 'Cả buổi tối huýt đúng bốn nốt.'],
+    lovebird: ['Vẹt Uyên Ương', 'Lúc nào cũng xin bàn hai người.'],
+    quail: ['Cút Con', 'Chạy khắp nơi theo đường thẳng.'],
+    blue_tit: ['Sẻ Ngô Xanh', 'Treo ngược để với tới thực đơn.'],
+    monarch: ['Bướm Vua', 'Đi một chặng rất xa chỉ vì chỗ này.'],
+    blue_butterfly: ['Bướm Morpho Xanh', 'Nếm bằng chân. Nhớ lau bàn.'],
+    dragonfly: ['Chuồn Chuồn', 'Lơ lửng. Không chịu ngồi.'],
+    stag_beetle: ['Bọ Kìm', 'Tách óc chó giùm cả bàn.'],
+    rhino_beetle: ['Bọ Hung Sừng', 'Nhấc được cái bàn này. Đã từng nhấc.'],
+    click_beetle: ['Bọ Búng', 'Kêu tách tách khi hài lòng.'],
+    weevil: ['Mọt Ngũ Cốc', 'Đã ăn thử mọi hộp yến mạch trong thành phố.'],
+    tortoise: ['Rùa Cạn Mới Nở', 'Bắt đầu đi tới đây từ hôm qua.'],
+    turtle: ['Rùa Sơn', 'Đánh bóng mai cho dịp này.'],
+    hermit: ['Ốc Mượn Hồn', 'Đang tìm bàn to hơn. Và nhà to hơn.'],
+    crab: ['Cua Đậu', 'Đi ngang vào nhà vệ sinh.'],
+    skink: ['Thằn Lằn Lưỡi Xanh', 'Thè lưỡi xanh khi được hỏi về món tráng miệng.'],
+    anole: ['Thằn Lằn Anole', 'Hít đất trước mặt các khách khác.'],
+    goldfish: ['Cá Vàng', 'Quên mình đã gọi món. Món ra thì mừng rỡ.'],
+    betta: ['Cá Xiêm', 'Xin đừng xếp cậu ấy ngồi gần gương.'],
+    goat_kid: ['Dê Con', 'Thử ăn cái thực đơn trước đã.'],
+    donkey: ['Lừa Con', 'Cứng đầu đòi cái bàn cạnh cửa.'],
+    pony: ['Ngựa Lùn Con', 'Đứng suốt cả bữa.'],
+    duck: ['Uyên Ương Con', 'Ăn mặc quá lố và biết rõ điều đó.'],
+    capybara: ['Capybara Con', 'Ai cũng ngồi cạnh cậu ấy. Chẳng ai biết vì sao.'],
+    red_panda: ['Gấu Trúc Đỏ Con', 'Giật mình là đứng dậy giơ hai tay lên cao.'],
+    panda: ['Gấu Trúc Con', 'Gọi rau. Ăn mười bốn tiếng.'],
+    koala: ['Gấu Túi Con', 'Ngủ trước khi thực đơn tới.'],
+    sloth: ['Lười Con', 'Để lại tiền tip tuần trước. Ngày mai mới tới.'],
+    lemur: ['Vượn Cáo Chuột', 'Đôi mắt đó đã thấy mọi món tráng miệng.'],
+    marmoset: ['Khỉ Lùn Marmoset', 'Cầm thìa bằng cả hai tay.'],
+    tarsier: ['Khỉ Lùn Tarsier', 'Mỗi con mắt to hơn cái dạ dày.'],
+    loris: ['Cu Li', 'Vào chậm. Gọi chậm. Dễ thương.'],
+    armadillo: ['Tatu Hồng', 'Bộ giáp nhỏ nhất thành phố.'],
+    pangolin: ['Tê Tê Con', 'Lễ phép cuộn tròn nếu bạn nhìn chằm chằm.'],
+    anteater: ['Thú Ăn Kiến Lụa', 'Liếc đám kiến đen bên kia phòng.'],
+    numbat: ['Numbat', 'Mỗi ngày liếm mười nghìn vụn bánh.'],
+    quokka: ['Quokka', 'Mỉm cười với hóa đơn.'],
+    wallaby: ['Wallaby Con', 'Mang đồ thừa về nhà trong túi.'],
+    sugar_glider: ['Sóc Bay Úc', 'Từ kệ trên cùng đáp xuống tô súp của bạn.'],
+    bat: ['Dơi Ong Nghệ', 'Thú nhỏ nhất trong sổ. Tự treo áo khoác.'],
+    moth: ['Bướm Đêm Phong Hồng', 'Chỉ đến vì mấy cái đèn lồng.'],
+    firefly: ['Đom Đóm', 'Giúp bạn tiết kiệm một cây nến.'],
+    owlet: ['Cú Con', 'Xoay đầu đọc thực đơn phía sau lưng.'],
+    dormouse: ['Chuột Sóc', 'Ngủ bảy tháng, rồi đòi ăn sáng.'],
+    kiwi: ['Kiwi Con', 'Không biết bay. Cũng chẳng có ý định.'],
+    puffin: ['Hải Âu Cổ Rụt Con', 'Cái mỏ đó chứa được mười hai hạt đậu.'],
+    penguin: ['Cánh Cụt Con', 'Mặc nhầm lễ phục cho quán này, nhưng vẫn vui.'],
+    toucan: ['Tu Căng Nhỏ', 'Tung từng quả dâu lên không trước khi ăn.'],
+    parrot: ['Vẹt Tí Hon', 'Đã mách nhà phê bình bạn nói gì về ông ấy.'],
+    flamingo: ['Hồng Hạc Con', 'Đứng một chân. Ăn bằng chân kia.'],
+    peacock: ['Công Con', 'Chiếm ba chỗ ngồi.'],
+    rooster: ['Gà Trống Tre', 'Thông báo bánh xe đang quay. Lần nào cũng vậy.'],
+    poison_frog: ['Ếch Phi Tiêu Xanh', 'Vô hại nếu bạn đừng liếm nó. Làm ơn.'],
+    red_frog: ['Ếch Mắt Đỏ', 'Nhìn chằm chằm khi súp ra trễ.'],
+    axolotl: ['Axolotl', 'Chẳng bao giờ lớn hẳn. Và cười vì chuyện đó.'],
+    chameleon: ['Tắc Kè Hoa Bỏ Túi', 'Hòa vào giấy dán tường. Bạn sẽ không tìm ra để tính tiền.'],
+    iguana: ['Cự Đà Mới Nở', 'Chỉ salad. Luôn luôn salad.'],
+    baby_croc: ['Cá Sấu Caiman Con', 'Chưa ai dám bảo nó chờ.'],
+    clownfish: ['Cá Hề', 'Ai cũng hỏi. Cậu ấy không đi lạc.'],
+    seahorse: ['Cá Ngựa Lùn', 'Bố trả tiền.'],
+    jellyfish: ['Sứa Mặt Trăng', 'Không có não. Khẩu vị tuyệt vời.'],
+    puffer: ['Cá Nóc', 'Thấy giá là tự ái.'],
+    shrimp: ['Tép Anh Đào', 'Bàn bên có một con tép. Hơi ngại.'],
+    octopus: ['Bạch Tuộc Dumbo', 'Cầm tám cái thìa, khen cả tám.'],
+    starfish: ['Sao Biển', 'Dạ dày tự đi ra đón món ăn.'],
+    lobster: ['Tôm Hùm Con', 'Mừng vì đây là quán rau.'],
+    scorpion: ['Bọ Cạp Cát', 'Phát sáng dưới trăng. Mang hóa đơn tới cẩn thận.'],
+    spider: ['Nhện Nhảy', 'Vẫy chào bằng hai chân trước.'],
+    mantis: ['Bọ Ngựa Phong Lan Non', 'Trông như lọ hoa giữa bàn.'],
+    lion_cub: ['Sư Tử Con', 'Gầm lên. Thành ra tiếng chít.'],
+    tiger_cub: ['Hổ Con', 'Rình xe đẩy tráng miệng.'],
+    leopard: ['Báo Con', 'Tha bữa ăn lên kệ.'],
+    lynx: ['Linh Miêu Con', 'Chùm lông tai đó là thật.'],
+    siamese: ['Mèo Xiêm Con', 'Có điều phàn nàn. Sẽ hát cho nghe.'],
+    zebra: ['Ngựa Vằn Con', 'Mã vạch miễn phí.'],
+    fawn: ['Nai Con', 'Giật mình vì ấm nước.'],
+    reindeer: ['Tuần Lộc Con', 'Mỗi năm bận một lần. Còn lại rảnh.'],
+    llama: ['Llama Con', 'Phán xét bạn. Hiếm khi nhổ nước bọt.'],
+    alpaca: ['Alpaca Con', 'Vị khách mềm nhất phòng.'],
+    camel: ['Lạc Đà Con', 'Không cần uống nước cho tới Chủ nhật.'],
+    elephant: ['Voi Bỏ Túi', 'Không bao giờ quên món đã gọi. Hay món mang nhầm.'],
+    giraffe: ['Hươu Cao Cổ Bỏ Túi', 'Với tới kệ cao nhất. Vẫn nhờ lấy giùm.'],
+    hippo: ['Hà Mã Bỏ Túi', 'Một cái ngáp là hết tô.'],
+    rhino: ['Tê Giác Bỏ Túi', 'Mắt rất kém. Mũi cực thính.'],
+    bear: ['Gấu Bỏ Túi', 'Đi thẳng tới thìa mật ong.'],
+    polar_bear: ['Gấu Bắc Cực Con', 'Hỏi súp lạnh hơn được không.'],
+    walrus: ['Hải Mã Bỏ Túi', 'Đó không phải là đũa đâu.'],
+    seal: ['Hải Cẩu Con', 'Cả phòng im phăng phắc.'],
+    tapir: ['Heo Vòi Con', 'Sọc như quả dưa. Ăn dưa.'],
+    okapi: ['Okapi Con', 'Trông như do cả một hội đồng thiết kế.'],
+    gorilla: ['Khỉ Đột Bỏ Túi', 'Hiền lành. Lặng lẽ ăn hết rau của mọi người.'],
+    croc: ['Cá Sấu Bỏ Túi', 'Đang cười, theo một cách nào đó.'],
+    komodo: ['Rồng Komodo Mới Nở', 'Nếm không khí trước khi quyết định.'],
+    emperor: ['Cánh Cụt Hoàng Đế Con', 'Chờ trên chân bố.'],
+    snowy_owl: ['Cú Tuyết Con', 'Đọc hết cuốn sách nấu ăn. Không đồng ý.'],
+    pheasant: ['Trĩ Vàng', 'Bé tí, và mặc đẹp nhất thành phố.'],
+    atlas_moth: ['Bướm Atlas', 'Không có miệng. Đến vì không khí.'],
+    goliath: ['Bọ Goliath', 'To hơn cái bàn. Ngồi dưới gầm bàn.'],
+    bison: ['Bò Rừng Bỏ Túi', 'Giẫm đạp một cách lịch sự.'],
+    yak: ['Bò Tây Tạng Bỏ Túi', 'Tự mang chăn theo.'],
+    moose: ['Nai Sừng Tấm Con', 'Sừng lại mắc vào dây cờ.'],
+    whale: ['Cá Voi Bỏ Túi', 'Loài lớn nhất thế giới. Ở đây vừa một cái tô.'],
+    narwhal: ['Kỳ Lân Biển Bỏ Túi', 'Dùng ngà làm một cái nĩa rất cao.'],
+    trex: ['T. Rex Tí Hon', 'Không với tới thìa. Phục vụ giúp cho.'],
+    triceratops: ['Tam Giác Long Tí Hon', 'Cho xin salad. Trễ sáu mươi sáu triệu năm.'],
+    stego: ['Kiếm Long Tí Hon', 'Não bằng hạt đậu. Thích ăn đậu.'],
+    mammoth: ['Voi Ma Mút Tí Hon', 'Từ băng giá trở về vì món hầm.'],
+    dodo: ['Chim Dodo', 'Mừng vì được ở đây. Rất mừng.'],
+    sabertooth: ['Mèo Răng Kiếm Con', 'Vẫn không ngậm được miệng.'],
+    pterosaur: ['Dực Long Tí Hon', 'Đáp lên đèn trần. Ngồi chờ.'],
+    golden_hamster: ['Hamster Mơ Vàng', 'Chỉ xuất hiện sau những giấc ngủ dài nhất.'],
+  };
+
+  // Words that are fine as they are, so the checker does not report them.
+  const known = new Set(['Squeekerant', 'Squeektoshi', 'Bean', 'Pip', 'Bun', 'COMBO', 'Z', 'Winks', 'cash', 'SQK', 'Romaine', 'Domino']);
+  const setName = (o, n, note) => {
+    if (!o) return;
+    o.n = n;
+    known.add(n);
+    if (note !== undefined) o.note = note;
+  };
+
+  for (const table of ['FLAVOURS', 'RARITY', 'FURS', 'HATS']) for (const k in DATA[table]) setName(WW[table] && WW[table][k], DATA[table][k]);
+  for (const id in INGREDIENTS) setName(WW.INGREDIENT[id], INGREDIENTS[id][0], INGREDIENTS[id][1]);
+  for (const id in DISHES) setName(WW.DISH[id], DISHES[id]);
+  DREAMS.forEach((n, i) => {
+    WW.DREAMS[i][0] = n;
+    known.add(n);
+  });
+  for (const n of WW.NEIGHBOURS) {
+    known.add(n.n);
+    n.shop = SHOPS[n.id];
+    known.add(n.shop);
+  }
+  for (const k in STYLES) for (const id in STYLES[k]) setName(WW.ROOM_STYLES[k][id], STYLES[k][id]);
+  for (const row of WW.DECOR_KINDS) row[1] = KINDS[row[0]];
+  for (const id in SEASONS) setName(WW.SEASONS[id], SEASONS[id]);
+  for (const id in WEATHER) setName(WW.WEATHER[id], WEATHER[id]);
+  for (const slot in EXTERIOR) for (const id in EXTERIOR[slot]) setName(WW.EXTERIOR[slot][id], EXTERIOR[slot][id]);
+  for (const p of WW.PREP) setName(p, PREP[p.id]);
+  for (const id in DECOR) setName(WW.DECOR_BY_ID[id], DECOR[id][0], DECOR[id][1] !== undefined ? DECOR[id][1] : WW.DECOR_BY_ID[id].note);
+  for (const n of WW.CFG.BOOK_TROPHIES) setName(WW.DECOR_BY_ID['trophy_' + n], `Cúp ${n} Khách`, `Nhận khi gặp ${n} loài khách.`);
+  for (const id in ANIMALS) setName(WW.ANIMAL[id], ANIMALS[id][0], ANIMALS[id][1]);
+
+  const EXACT = new Map(Object.entries({
+    "That's all the tips for today. Come back tomorrow.": 'Hôm nay hết tiền tip rồi. Mai quay lại nhé.', 'Tips today': 'Tip hôm nay',
+    "Three parties book in each day. They pay above the menu price and can bring guests you haven't met. New ones arrive at midnight UTC.": 'Mỗi ngày có ba đoàn đặt tiệc. Họ trả cao hơn giá thực đơn và có thể dẫn theo khách bạn chưa gặp. Đơn mới có lúc nửa đêm UTC.',
+    // Reworded English
+    'Not enough left at the market.': 'Chợ không còn đủ hàng.',
+    'Every cook is busy or out of energy. Hire a sous chef, or wait until he next sleeps.': 'Bếp nào cũng bận hoặc hết sức. Hãy thuê bếp phó, hoặc đợi tới khi cậu ấy ngủ.',
+    'What kind of pepper is safe for a hamster?': 'Loại ớt nào an toàn cho hamster?',
+    'How deep does the care policy say bedding should be?': 'Chính sách chăm sóc yêu cầu lớp lót sâu bao nhiêu?',
+    'What does a round with zero work prove?': 'Một round không có công chứng minh điều gì?',
+    'Only that no work was accepted. It doesn\'t prove he was asleep.': 'Chỉ là không có công được ghi nhận. Không chứng minh cậu ấy đã ngủ.',
+    'About how many wheel passes did Squeektoshi make on his last full day?': 'Trong ngày trọn vẹn gần nhất, Squeektoshi chạy khoảng bao nhiêu vòng?', 'Under 9,000': 'Dưới 9,000', '9,000 to 10,999': '9,000 đến 10,999', '11,000 to 12,999': '11,000 đến 12,999', '13,000 or more': 'Từ 13,000 trở lên', 'His day on the official stats page runs from 12:00 to 12:00 UTC.': 'Một ngày của cậu ấy trên trang thống kê chính thức tính từ 12:00 đến 12:00 UTC.',
+    'A lunchbox needs Rolled Oats.': 'Hộp cơm cần Yến Mạch Cán.',
+    'That is outside the room.': 'Chỗ đó ở ngoài phòng.',
+    'You don\'t have one in your bag.': 'Trong túi không có món này.',
+    'You don\'t have one.': 'Bạn không có món này.',
+    'You don\'t know that recipe yet.': 'Bạn chưa biết công thức này.',
+    'You don\'t know that recipe.': 'Bạn không biết công thức này.',
+    'They don\'t have that today.': 'Hôm nay họ không có món đó.',
+    'You don\'t have that to give.': 'Bạn không có món đó để đổi.',
+    'One taste a day. It is only polite.': 'Mỗi ngày nếm một lần thôi, cho phải phép.',
+    'That offer has expired.': 'Đề nghị đó đã hết hạn.',
+    'Cooks in real time, whatever he\'s doing.': 'Nấu theo giờ thật, bất kể cậu ấy đang làm gì.',
+    'Simmers only while he isn\'t running, so it finishes while he sleeps.': 'Chỉ liu riu khi cậu ấy không chạy, nên chín trong lúc cậu ấy ngủ.',
+    'No neighbour has any out today.': 'Hôm nay không hàng xóm nào có.',
+    'A rare find. No shop sells it.': 'Của hiếm. Không tiệm nào bán.',
+    'Each extra one adds only a quarter of that.': 'Thêm món giống vậy chỉ được một phần tư số đó.',
+    'Your hamster. Runs one stove or wok at no energy cost, with 10% more portions.': 'Hamster của bạn. Đứng một bếp lò hoặc chảo mà không mất sức, thêm 10% phần ăn.',
+    'Runs one stove or wok at no energy cost, with 10% more portions.': 'Đứng một bếp lò hoặc chảo mà không mất sức, thêm 10% phần ăn.',
+    'Costs 15 cash and 1 scoop of Rolled Oats.': 'Tốn 15 cash và 1 muỗng Yến Mạch Cán.',
+    'Empty. The market has plenty.': 'Trống. Ở chợ có nhiều lắm.',
+    'Nothing yet. Shake trees and sweep floors. Things turn up.': 'Chưa có gì. Rung cây và quét sàn sẽ nhặt được đồ.',
+    'Three parties book in each day. They pay well, often better than walk-in guests, and can bring guests you haven\'t met. New ones arrive at midnight UTC.': 'Mỗi ngày có ba đoàn đặt tiệc. Họ trả khá, thường hơn khách vãng lai, và có thể dẫn theo khách bạn chưa gặp. Đơn mới có lúc nửa đêm UTC.',
+    'Yours. Tap to use.': 'Của bạn. Bấm để dùng.',
+    'Who runs the highest level restaurant.': 'Ai có nhà hàng cấp cao nhất.',
+    'Clean, taste and trade here.': 'Lau sàn, nếm món và đổi hàng ở đây.',
+    'Locked: they have to agree': 'Khóa: họ phải đồng ý',
+    'Every ingredient has a level, shown as L1 to L4. Give something of the same level or better. Unlocked goods swap right away. For locked ones, they answer next round and may say no.': 'Mỗi nguyên liệu có một cấp, từ L1 đến L4. Hãy đưa món cùng cấp hoặc cao hơn. Món không khóa đổi được ngay. Món khóa thì round sau họ mới trả lời và có thể từ chối.',
+    'They will answer next round.': 'Round sau họ sẽ trả lời.',
+    'Asked. They will answer next round.': 'Đã hỏi. Round sau họ sẽ trả lời.',
+    'A round with no passes shows no accepted work. It doesn\'t prove he was asleep. The sensor only counts passes.': 'Round không có vòng quay nghĩa là không có công được ghi nhận. Điều đó không chứng minh cậu ấy ngủ, cảm biến chỉ đếm vòng.',
+    'He arrives when the wheel next starts after a long sleep. Name three dishes. A portion of each is set aside if you have one. If not, it must be on the counter when he comes.': 'Ông ấy đến khi bánh xe quay lại sau một giấc dài. Hãy chọn ba món. Nếu có sẵn, mỗi món được để dành một phần. Nếu chưa, món đó phải có trên quầy lúc ông ấy đến.',
+    'It goes back in your bag.': 'Món này quay lại túi.',
+    'Seats next to it count.': 'Ghế sát bên được tính.',
+    'Shy guests only come once they see what they\'re looking for.': 'Khách nhút nhát chỉ đến khi thấy thứ họ tìm.',
+    'Every tiny animal you have met, and the ones you haven\'t.': 'Mọi loài thú tí hon bạn đã gặp, và chưa gặp.',
+    'You earn one for every round he isn\'t running.': 'Mỗi round cậu ấy không chạy được một Wink.',
+    'Move things around, or place something from your bag. Your furniture opens in the Kitchen.': 'Dời đồ ở đây, hoặc đặt đồ trong túi. Đồ đạc của bạn mở ra ở Bếp.',
+    'Your first visit earns a welcome gift.': 'Lần đầu ghé có quà chào mừng.',
+    'Open. Guests come in while he runs.': 'Mở cửa. Khách vào khi cậu ấy chạy.',
+    'Heading home': 'Đang về nhà',
+    'Plated when the round settles': 'Lên đĩa khi round chốt',
+    'Your restaurant was restored from your other device.': 'Đã khôi phục nhà hàng từ thiết bị khác của bạn.',
+    'Go home': 'Về nhà',
+    'Daytime. He\'s up.': 'Ban ngày. Cậu ấy đang thức.',
+    'Night. He\'s asleep, so the lamps are on.': 'Ban đêm. Cậu ấy đang ngủ nên đèn được thắp.',
+    'In season, +10% tips on': 'Đúng mùa, tip +10% với món',
+    'The weather changes every 3 hours, for the whole street at once.': 'Thời tiết đổi mỗi 3 tiếng, cả phố cùng đổi.',
+    'NEXT STREET': 'PHỐ KHÁC',
+    'Tips (half for a replay)': 'Tip (một nửa vì là xem lại)',
+    'Tips (banked when the round settles)': 'Tip (vào túi khi round chốt)',
+    'A tiny restaurant in the woods. Your hamster runs the kitchen. A real hamster named Squeektoshi runs the wheel that powers it.': 'Một nhà hàng tí hon trong rừng. Hamster của bạn đứng bếp. Một hamster thật tên Squeektoshi chạy bánh xe cấp năng lượng cho nơi này.',
+    'Hat (more come with levels)': 'Mũ (lên cấp có thêm)',
+    'Left hungry (sold out)': 'Đói bụng bỏ về (hết món)',
+    'Left (no seats)': 'Bỏ về (hết ghế)',
+    'Left (staff too tired)': 'Bỏ về (đội ngũ quá mệt)',
+    'A golden dream, which only comes after 15 hours of sleep or more. It sells for twice as much.': 'Giấc mơ vàng, chỉ có khi ngủ từ 15 tiếng trở lên. Bán được gấp đôi.',
+    'Correct!': 'Đúng rồi!',
+    'NO SIGNAL': 'MẤT TÍN HIỆU',
+    'Your turn is over. The plates are still warm.': 'Hết lượt của bạn. Đĩa vẫn còn ấm.',
+    'A replay of his last run at his real pace, with long pauses trimmed. Half tips.': 'Xem lại lần chạy gần nhất đúng nhịp thật, đã cắt các đoạn nghỉ dài. Nửa tiền tip.',
+    // Going between places, and the world outside
+    LEADERBOARD: 'XẾP HẠNG', 'OTHER STREET': 'PHỐ KHÁC', 'Another street': 'Phố khác',
+    'Click to walk to another street, with five other houses.': 'Bấm để sang phố khác, có năm nhà khác.', 'No more streets today. You can move again tomorrow.': 'Hôm nay hết lượt sang phố. Ngày mai lại đi được.',
+    'Click to see everyone.': 'Bấm để xem tất cả.', 'Ranked by restaurant level, then house level.': 'Xếp theo cấp nhà hàng, rồi tới mức nhà.',
+    'Tap a house to go in. Drag the map to look along the street.': 'Bấm vào nhà để vào trong. Kéo map để nhìn dọc phố.',
+    'Drag anything here to move it, or pick something below to place it.': 'Kéo món đồ ở đây để dời, hoặc chọn món bên dưới để đặt.', 'Finish arranging': 'Xếp xong',
+    'Open the Decor Shop': 'Mở Tiệm Đồ', 'Nothing here. The Decor Shop has plenty.': 'Chưa có gì. Tiệm Đồ có rất nhiều.', 'Furniture, yard pieces and new looks for your building.': 'Nội thất, đồ ngoài sân và diện mạo mới cho nhà hàng.',
+    'Your furniture opens in the Kitchen.': 'Đồ đạc của bạn mở ra ở Bếp.', 'Music and sound': 'Nhạc và âm thanh', 'Turn music and sound on or off.': 'Bật hoặc tắt nhạc và âm thanh.',
+    'Building parts': 'Các bộ phận',
+    Building: 'Mặt tiền', 'How your building looks from outside, part by part. What you buy stays yours.': 'Nhà hàng trông thế nào từ bên ngoài, từng bộ phận một. Đã mua thì giữ luôn.', Walls: 'Tường', Roof: 'Mái', 'Roof top': 'Đỉnh mái', Windows: 'Cửa sổ', Door: 'Cửa', Foundation: 'Nền', Balcony: 'Ban công', Towers: 'Tháp', Sign: 'Biển hiệu',
+    'That spot is not free.': 'Chỗ đó không đặt được.',
+    'More of the same add only a quarter of that.': 'Thêm món giống vậy chỉ được một phần tư số đó.',
+    MARKET: 'CHỢ', 'DECOR SHOP': 'TIỆM ĐỒ', STREET: 'PHỐ', HOME: 'VỀ NHÀ',
+    'Go outside': 'Ra ngoài', 'Go inside': 'Vào trong', 'Back home': 'Về nhà', 'Back to the street': 'Ra lại phố',
+    'Click to go outside.': 'Bấm để ra ngoài.', 'Click to go in.': 'Bấm để vào trong.', 'Click to go back to the street.': 'Bấm để ra lại phố.',
+    'Show everything': 'Xem tất cả', Arrange: 'Sắp xếp', 'Click to finish.': 'Bấm để xong.', 'Move what stands here, or place what is in your bag.': 'Dời đồ ở đây, hoặc đặt đồ trong túi.',
+    'The market': 'Khu chợ', 'The decor shop': 'Tiệm đồ trang trí', 'Click for yard pieces, furniture, walls and a new look for your building.': 'Bấm để xem đồ ngoài sân, nội thất, tường và diện mạo mới cho nhà hàng.',
+    'Click to walk over to your neighbours.': 'Bấm để đi sang nhà hàng xóm.', 'The way home': 'Đường về nhà', 'Click to walk back to your restaurant.': 'Bấm để đi về nhà hàng của bạn.',
+    'Your trade shelf': 'Kệ đổi hàng của bạn', 'Click to hang up ingredients for neighbours.': 'Bấm để treo nguyên liệu cho hàng xóm đổi.',
+    'The notice board has something for you.': 'Bảng tin có việc cho bạn.',
+    'Day: he is up.': 'Ban ngày: cậu ấy đang thức.', 'Night: he is asleep, so the lamps are lit.': 'Ban đêm: cậu ấy đang ngủ nên đèn được thắp.',
+    'Tips +10% in season on': 'Đúng mùa, tip +10% với món', 'no change to tips.': 'tip không đổi.', 'The weather turns every 3 hours, the same for the whole street.': 'Thời tiết đổi mỗi 3 tiếng, cả phố giống nhau.',
+    'Their tree is out on the street.': 'Cây của họ ở ngoài phố.', 'Decor Shop': 'Tiệm Đồ', 'Notice Board': 'Bảng Tin', Mailbox: 'Hòm thư', 'Your shelf': 'Kệ của bạn', Leaderboard: 'Xếp hạng',
+    'Other neighbours': 'Hàng xóm khác', 'Five other houses take their places.': 'Năm nhà khác sẽ thế chỗ.', 'Drag a piece to move it.': 'Kéo một món để dời nó.',
+    'They stand outside and add charm, which draws more guests in. Only the first of each kind counts.': 'Đặt ngoài sân để thêm sức hút, kéo thêm khách vào. Mỗi loại chỉ tính món đầu tiên.',
+    'It goes in your yard. Pick a tile.': 'Món này đặt ngoài sân. Chọn một ô.', 'In use': 'Đang dùng', 'Arrange the yard': 'Sắp xếp sân', 'Drag yard pieces around, or place what is in your bag.': 'Kéo đồ trong sân, hoặc đặt đồ trong túi.',
+    'Yard pieces and the look of your building add charm.': 'Đồ ngoài sân và diện mạo nhà hàng tạo sức hút.', 'Only the first of each yard piece counts.': 'Mỗi loại đồ sân chỉ tính món đầu tiên.', 'More charm brings more guests, up to 50% more.': 'Sức hút càng cao khách càng đông, tối đa thêm 50%.',
+    'Drag anything in the yard to move it, or pick something from your bag.': 'Kéo món đồ trong sân để dời, hoặc chọn đồ trong túi.', 'It is put away and waits in your bag.': 'Món này được cất vào túi.',
+    Awning: 'Mái hiên', Trim: 'Trang trí',
+    'Five neighbours are out today, wherever the day puts them. Their buildings change as they grow. In the full game these are other players, here they are locals so you can try it out.': 'Hôm nay có năm hàng xóm, mỗi ngày đứng một chỗ khác nhau. Nhà họ đổi khi họ lớn lên. Bản đầy đủ đây sẽ là người chơi khác, giờ là dân phố để bạn thử.',
+    'Clean their floor, trade, taste a dish.': 'Lau sàn nhà họ, đổi hàng, nếm thử món.',
+    // Tabs and big words
+    Kitchen: 'Bếp', Market: 'Chợ', Orders: 'Đơn', Recipes: 'Món ăn', Staff: 'Đội ngũ', Decor: 'Đồ đạc', Guests: 'Khách', Street: 'Phố', Diary: 'Nhật ký',
+    'Your stations, the counter, your bag and last night\'s dream.': 'Các bếp, quầy món, túi đồ và giấc mơ đêm qua.',
+    'Buy ingredients. Goods and prices change every day.': 'Mua nguyên liệu. Hàng và giá đổi mỗi ngày.',
+    'Party orders and the daily question.': 'Đơn tiệc và câu hỏi mỗi ngày.',
+    'Your dishes, upgrades and the Test Kitchen.': 'Món của bạn, nâng cấp và Bếp Thử.',
+    'Your hamster, sous chefs, waiters and cleaners.': 'Hamster của bạn, bếp phó, phục vụ và tạp vụ.',
+    'Furniture, room size, walls and floors.': 'Nội thất, cỡ phòng, tường và sàn.',
+    'Every tiny animal you have met, and who you have not.': 'Mọi loài thú tí hon bạn đã gặp, và chưa gặp.',
+    'Neighbours, the leaderboard, your trade shelf and your mailbox.': 'Hàng xóm, bảng xếp hạng, kệ đổi hàng và hòm thư.',
+    'Prep list, the critic, trophies and dreams.': 'Việc cần làm, nhà phê bình, cúp và giấc mơ.',
+    Cash: 'Cash', Sound: 'Âm thanh', 'Turn sound on or off.': 'Bật hoặc tắt âm thanh.',
+    'What tiny animals pay with. Game money only, no real value.': 'Thú tí hon trả bằng thứ này. Chỉ là tiền trong game, không có giá trị thật.',
+    'Guests pay into the till, which is banked each time a round settles.': 'Khách trả vào két, tiền vào túi mỗi khi một round chốt.',
+    'One for every round he does not run.': 'Mỗi round cậu ấy không chạy được một Wink.',
+    'Spend them in the Test Kitchen, on hints and on Dream Dishes.': 'Dùng ở Bếp Thử, mua gợi ý và nấu Món Trong Mơ.',
+    'Guests, orders and upgrades all count.': 'Khách, đơn và nâng cấp đều được tính.',
+    'The Wheel': 'Bánh Xe', 'What he is doing right now. Click for the numbers.': 'Cậu ấy đang làm gì lúc này. Bấm để xem số liệu.',
+    'Zoom in': 'Phóng to', 'Or use the mouse wheel, or pinch on a phone.': 'Hoặc lăn chuột, hoặc chụm ngón trên điện thoại.', 'Zoom out': 'Thu nhỏ', 'Drag the map to look around.': 'Kéo map để nhìn quanh.', 'Show the whole room': 'Xem cả phòng',
+    // World
+    'A dirty spot on their floor': 'Một chỗ dơ trên sàn nhà họ', 'A dirty spot': 'Một chỗ dơ', 'Click to clean it. Tidy floors keep tips up.': 'Bấm để lau. Sàn sạch giữ tip cao.',
+    'Their tree': 'Cây của họ', 'You already shook it today.': 'Hôm nay bạn đã rung rồi.', 'Click to shake it. Something usually falls out.': 'Bấm để rung. Thường có gì đó rơi ra.', 'The tree outside': 'Cái cây ngoài cửa', 'Click to shake it.': 'Bấm để rung.', 'Bare until tomorrow.': 'Trụi lá tới mai.',
+    'Their shelf': 'Kệ của họ', 'The market stall': 'Sạp chợ', 'Click to trade ingredients.': 'Bấm để đổi nguyên liệu.', 'Click to buy ingredients. Goods change every day.': 'Bấm để mua nguyên liệu. Hàng đổi mỗi ngày.',
+    'Their notice board': 'Bảng tin của họ', 'The notice board': 'Bảng tin', 'Nothing here for you.': 'Ở đây không có gì cho bạn.', 'Click for party orders and the daily question.': 'Bấm để xem đơn tiệc và câu hỏi mỗi ngày.',
+    'Their door': 'Cửa nhà họ', 'Your front door': 'Cửa nhà bạn', 'Click to walk home.': 'Bấm để đi về nhà.', 'Open. Guests come in as he runs.': 'Mở cửa. Khách vào khi cậu ấy chạy.', 'Quiet hours. Nobody comes in until he runs again.': 'Giờ yên tĩnh. Không ai vào cho tới khi cậu ấy chạy lại.', 'Skirting Street': 'Phố Chân Tường', 'Click to walk over to a neighbour.': 'Bấm để sang nhà hàng xóm.',
+    'Squeektoshi and his wheel': 'Squeektoshi và bánh xe', 'Click for the numbers.': 'Bấm để xem số liệu.', 'Their kitchen is busy.': 'Bếp nhà họ đang bận.', 'Click to cook.': 'Bấm để nấu.', 'Room for another station': 'Còn chỗ cho một bếp nữa', 'Click to open the kitchen.': 'Bấm để mở bếp.', 'The counter': 'Quầy món', 'Guests can only eat what is here.': 'Khách chỉ ăn được món có ở đây.',
+    'On the way in': 'Đang đi vào', 'Looking for a seat': 'Đang tìm chỗ ngồi', 'Going to a seat': 'Đang đến chỗ ngồi', Waiting: 'Đang chờ', Eating: 'Đang ăn', 'Off home': 'Đang ra về', 'Turning back': 'Quay lại', 'Just passing by': 'Chỉ đi ngang qua',
+    'Connected to the real wheel.': 'Đã kết nối với bánh xe thật.', 'Your restaurant came back from your other device.': 'Nhà hàng của bạn đã được lấy về từ thiết bị khác.',
+    'Quiet hours': 'Giờ yên tĩnh', Asleep: 'Đang ngủ', 'CATCHING HIS BREATH': 'ĐANG LẤY LẠI SỨC', 'NO SIGNAL': 'MẤT TÍN HIỆU', 'QUIET HOURS': 'GIỜ YÊN TĨNH', 'Plated at the next settlement': 'Ra đĩa ở lần chốt tới',
+    'Free. Tap to cook.': 'Đang rảnh. Bấm để nấu.', 'Their floor is spotless.': 'Sàn nhà họ sạch bong.', 'You shook their tree today.': 'Hôm nay bạn đã rung cây của họ.', 'Tap their tree to shake it.': 'Bấm vào cây của họ để rung.', 'You tasted a dish today.': 'Hôm nay bạn đã nếm một món.', 'Tap a dish on their counter to taste it.': 'Bấm vào món trên quầy của họ để nếm.', 'Tap here to trade or hire.': 'Bấm vào đây để đổi hàng hoặc thuê người.',
+    'On the Line: he is running!': 'Bàn Xoay: cậu ấy đang chạy!', 'Replay his last run': 'Xem lại lần chạy gần nhất', 'No recorded run to replay yet.': 'Chưa có lần chạy nào để xem lại.', 'Go home': 'Về nhà',
+    'Off the line': 'Rời Bàn Xoay', 'Orders served': 'Đơn đã phục vụ', 'Best combo': 'Combo cao nhất', Missed: 'Bỏ lỡ', 'Tips, half for a replay': 'Tip, một nửa vì là xem lại', 'Tips, banked when the round settles': 'Tip, vào túi khi round chốt', 'Back to the kitchen': 'Về bếp',
+    'The tree is bare until tomorrow.': 'Cây trụi lá tới mai.', 'Drag a piece to move it. Open Decor to finish.': 'Kéo một món để di chuyển. Mở Đồ đạc để kết thúc.', 'Tap a tile to place it.': 'Bấm vào một ô để đặt.',
+    // Intro and overlays
+    'A tiny restaurant behind the skirting board. Your hamster runs the kitchen. A real hamster named Squeektoshi runs the wheel that powers it.': 'Một nhà hàng tí hon sau chân tường. Hamster của bạn lo bếp. Một hamster thật tên Squeektoshi chạy bánh xe cấp sức cho cả quán.',
+    'When he runs, guests walk in and the woks fire. When he sleeps, the pots simmer and he dreams up new dishes.': 'Khi cậu ấy chạy, khách kéo vào và chảo bốc lửa. Khi cậu ấy ngủ, nồi liu riu và cậu ấy mơ ra món mới.',
+    'Your head chef': 'Bếp trưởng của bạn', 'Your restaurant': 'Nhà hàng của bạn', 'Open the doors': 'Mở cửa đón khách', Fur: 'Bộ lông', 'Hat, more come with levels': 'Mũ, lên cấp có thêm', 'Restaurant name': 'Tên nhà hàng', Done: 'Xong',
+    'He ran': 'Cậu ấy đã chạy', 'He rested': 'Cậu ấy đã nghỉ', 'No signal': 'Mất tín hiệu', 'Guests fed': 'Khách đã ăn', 'Left hungry, sold out': 'Về đói vì hết món', 'Left, no seats': 'Về vì hết ghế', 'Left, staff too tired': 'Về vì nhân viên quá mệt', 'Cash earned': 'Cash kiếm được', 'Winks gained': 'Winks nhận được', 'While you were away': 'Trong lúc bạn vắng mặt', 'Finished cooking': 'Đã nấu xong',
+    'The counter ran out early. Longer dishes make more portions, so cook those before you leave.': 'Quầy hết món sớm. Món nấu lâu cho nhiều phần hơn, nên nấu trước khi rời đi.',
+    'Guests left for lack of seats. More tables and chairs, or a bigger room, would catch them.': 'Khách bỏ về vì thiếu ghế. Thêm bàn ghế hoặc mở rộng phòng sẽ giữ được họ.',
+    'A golden dream, only after 15 hours or more. It sells for twice as much.': 'Giấc mơ vàng, chỉ có sau 15 tiếng ngủ trở lên. Bán được gấp đôi giá.',
+    'Every player sees this same dream, picked by the hash of the round he woke on.': 'Mọi người chơi đều thấy cùng giấc mơ này, chọn theo hash của round cậu ấy thức dậy.',
+    'Good morning': 'Chào buổi sáng', 'Cook it': 'Nấu luôn', Serve: 'Mời món', Later: 'Để sau',
+    'Answered today. A new question comes tomorrow.': 'Hôm nay đã trả lời. Mai có câu mới.', 'Right.': 'Đúng rồi.', 'Not quite.': 'Chưa đúng.', 'Waiting for the real wheel. Nothing counts, nothing is lost.': 'Đang chờ bánh xe thật. Không tính gì, không mất gì.', Cheats: 'Gian lận thử nghiệm',
+    'Start a new restaurant': 'Mở nhà hàng mới', 'Start over?': 'Làm lại từ đầu?', 'This deletes your restaurant, guest book and recipes on this device.': 'Việc này xóa nhà hàng, sổ khách và công thức của bạn trên thiết bị này.', 'Keep it': 'Giữ lại', 'Delete and start over': 'Xóa và làm lại',
+    'You stepped off the line.': 'Bạn đã rời Bàn Xoay.', 'The counter is empty. Cook something first.': 'Quầy trống. Nấu gì đó trước đã.', 'Replay of his last run, at his real pace, long pauses trimmed. Half tips.': 'Xem lại lần chạy gần nhất, đúng nhịp thật, bỏ bớt quãng nghỉ dài. Nửa tiền tip.', 'Live. Every turn of the real wheel moves the plates one step.': 'Trực tiếp. Mỗi vòng của bánh xe thật đẩy các đĩa đi một nấc.', 'That was the whole run.': 'Hết lần chạy rồi.', 'He stopped for a breather, so the line stops too.': 'Cậu ấy dừng lấy sức, nên Bàn Xoay cũng dừng.', 'Turn over. The plates are still warm.': 'Hết lượt. Đĩa vẫn còn ấm.',
+    // Canvas signs
+    'NEW!': 'MỚI!', 'COUNTER EMPTY! COOK SOMETHING': 'QUẦY TRỐNG! NẤU GÌ ĐI', 'COUNTER EMPTY': 'QUẦY TRỐNG', 'SOLD OUT': 'HẾT MÓN', FULL: 'HẾT CHỖ', TIRED: 'MỆT', OPEN: 'MỞ CỬA', QUIET: 'YÊN TĨNH', 'NO WIRE': 'MẤT SÓNG', KITCHEN: 'BẾP',
+    // Kitchen and shops
+    'Trades need the same level or better.': 'Đổi hàng cần cùng cấp hoặc cao hơn.', 'L1: greens, carrots, peas and oats': 'L1: rau lá, cà rốt, đậu và yến mạch', 'L2: vegetables and millet': 'L2: rau củ và hạt kê', 'L3: fruit': 'L3: trái cây', 'L4: seeds, egg, tofu and chicken': 'L4: hạt, trứng, đậu hũ và gà',
+    'Seats only count when they touch a table.': 'Ghế chỉ tính khi sát bàn.', 'Guests walk right over them. They add to your rating.': 'Khách đi qua được. Thêm điểm đánh giá.', 'Green things for your rating.': 'Cây xanh thêm điểm đánh giá.', 'They glow while he sleeps, and add to your rating.': 'Sáng lên khi cậu ấy ngủ, và thêm điểm đánh giá.', 'Real effects in the kitchen. Only your first of each kind works.': 'Có tác dụng thật trong bếp. Mỗi loại chỉ món đầu tiên có tác dụng.', 'They keep the floor tidy for you. Only your first of each kind works.': 'Giữ sàn sạch giúp bạn. Mỗi loại chỉ món đầu tiên có tác dụng.', 'For the guests and for your rating. A few do more.': 'Cho khách vui và thêm đánh giá. Vài món còn làm được nhiều hơn.', 'Shy guests only come once they see the thing they look for.': 'Khách nhút nhát chỉ đến khi thấy thứ họ tìm.', 'Big pieces for a big rating.': 'Đồ lớn, đánh giá lớn.',
+    'Tea Tin Stove': 'Bếp Hộp Trà', 'Cooks on real time, whatever he is doing.': 'Nấu theo giờ thật, bất kể cậu ấy đang làm gì.', 'Bottle Cap Wok': 'Chảo Nắp Chai', 'Fires only on real wheel passes. Waits while he sleeps.': 'Chỉ bốc lửa khi có vòng quay thật. Chờ khi cậu ấy ngủ.', 'Thimble Pot': 'Nồi Đê May', 'Simmers only on rounds he does not run. Finishes while he sleeps.': 'Chỉ liu riu ở các round cậu ấy không chạy. Chín trong lúc cậu ấy ngủ.',
+    'On the stove': 'Trên bếp lò', 'On the wok': 'Trên chảo', 'In the pot': 'Trong nồi', stove: 'bếp lò', wok: 'chảo', pot: 'nồi', 'Cannot be bought': 'Không bán', 'Seats beside it count as seats.': 'Ghế sát bàn này mới tính là ghế.', 'Guests can walk on it.': 'Khách đi qua được.', 'Only your first one of each kind works.': 'Mỗi loại chỉ món đầu tiên có tác dụng.', ' and more': ', và thêm nữa', 'Likes ': 'Thích ', 'Wants ': 'Muốn ', 'Only comes for a Dream Dish': 'Chỉ đến vì Món Trong Mơ', 'Only comes for a Golden Dream Dish': 'Chỉ đến vì Món Trong Mơ Vàng',
+    'Head chef': 'Bếp trưởng', 'Sous chef': 'Bếp phó', Waiter: 'Phục vụ', Cleaner: 'Tạp vụ', Sous: 'Bếp phó', 'sous chefs': 'bếp phó', waiters: 'phục vụ', cleaners: 'tạp vụ', Helper: 'Phụ việc', '+20% portions on the stove': '+20% phần ăn trên bếp lò', '+20% portions on the wok': '+20% phần ăn trên chảo', 'Cooks 15% faster': 'Nấu nhanh hơn 15%', 'Takes one flame for free with 10% more portions.': 'Đứng một bếp miễn phí, thêm 10% phần ăn.',
+    Close: 'Đóng', 'Free. Pick a dish to start.': 'Đang rảnh. Chọn món để bắt đầu.', Cook: 'Nấu', Again: 'Nấu lại', 'Cook again': 'Nấu lại', 'Buy what is missing and cook again': 'Mua phần còn thiếu rồi nấu lại', 'Next: ': 'Tiếp theo: ', 'Cook everything again': 'Nấu lại tất cả', 'The kitchen wall is full. A wider room makes space.': 'Tường bếp đã kín. Phòng rộng hơn sẽ có chỗ.', Add: 'Thêm', "Last night's dream": 'Giấc mơ đêm qua', 'Rare guests follow it.': 'Khách hiếm sẽ theo mùi tới.', 'Next shift wants': 'Ca tới thèm', ' 25% more for matching dishes': ' món hợp vị được thêm 25%', 'On the counter': 'Trên quầy', 'On the counter: nothing': 'Trên quầy: chưa có gì', 'Guests can only eat what is here. Food never spoils, so cook ahead.': 'Khách chỉ ăn được món có ở đây. Đồ ăn không bao giờ hỏng, cứ nấu trước.', Lunchboxes: 'Hộp cơm', Lunchbox: 'Hộp cơm', 'Tired waiters eat one on their own during service.': 'Phục vụ mệt sẽ tự ăn một hộp trong ca.', 'Costs 15 cash and 1 Rolled Oats.': 'Tốn 15 cash và 1 Yến Mạch Cán.', Pack: 'Gói', 'Nothing could start. Check your ingredients.': 'Không bếp nào nấu được. Kiểm tra nguyên liệu nhé.', Back: 'Quay lại', 'No recipes for this yet. Try the Test Kitchen.': 'Chưa có công thức cho bếp này. Thử vào Bếp Thử nhé.',
+    'Every restaurant has its own stall, so nobody has everything. Goods and prices change at midnight UTC, and better ingredients are always scarce. What your stall lacks, a neighbour may have: trade for it on the street. Each food here is named safe for hamsters by at least one care guide, in small plain amounts. This is a game, not care advice.': 'Mỗi nhà hàng có sạp riêng nên không ai có đủ mọi thứ. Hàng và giá đổi lúc nửa đêm UTC, nguyên liệu càng tốt càng khan. Sạp bạn thiếu gì thì hàng xóm có thể có: ra phố mà đổi. Mọi món ở đây đều được ít nhất một tài liệu chăm sóc ghi là an toàn cho hamster, với lượng nhỏ và để nguyên vị. Đây là trò chơi, không phải lời khuyên chăm sóc.',
+    'Your pantry': 'Kho của bạn', 'Empty.': 'Trống.', 'Notice Board': 'Bảng Tin', 'Three parties book in each day. They pay far better than walk ins and can bring guests you have not met. New ones come at midnight UTC.': 'Mỗi ngày có ba đoàn đặt bàn. Họ trả cao hơn hẳn khách vãng lai và có thể đưa tới khách bạn chưa gặp. Đoàn mới đến lúc nửa đêm UTC.', 'A new guest': 'Một khách mới', Deliver: 'Giao', 'Daily question': 'Câu hỏi mỗi ngày', 'Answer for free ingredients': 'Trả lời để nhận nguyên liệu miễn phí', 'Answered. A new question comes tomorrow.': 'Đã trả lời. Mai có câu mới.',
+    Upgrade: 'Nâng cấp', 'Upgrade this recipe': 'Nâng cấp công thức này', '+15% price, +10% portions, more XP per guest.': '+15% giá, +10% phần ăn, thêm XP mỗi khách.', 'A recipe you have not found': 'Công thức bạn chưa tìm ra', 'Made in the pot.': 'Làm trong nồi.', 'Made on the stove.': 'Làm trên bếp lò.', 'Made on the wok.': 'Làm trên chảo.', 'Try combinations in the Test Kitchen.': 'Thử phối nguyên liệu ở Bếp Thử.', 'Hints come from tasting at neighbours, or Winks.': 'Gợi ý đến từ việc nếm món ở nhà hàng xóm, hoặc dùng Winks.', 'tastes ': 'vị ', 'Contains: ': 'Có: ', 'Buy a hint': 'Mua gợi ý', 'Open the Test Kitchen': 'Mở Bếp Thử', All: 'Tất cả', Stove: 'Bếp lò', Wok: 'Chảo', Pot: 'Nồi', 'It is in your book now.': 'Đã ghi vào sổ của bạn.', 'You already know this.': 'Bạn biết món này rồi.', 'Nothing there. At least the flavours were interesting.': 'Không ra gì. Ít ra vị cũng thú vị.', 'Test Kitchen': 'Bếp Thử', 'Pick up to three ingredients and taste them.': 'Chọn tối đa ba nguyên liệu rồi nếm thử.', 'Winks fill up only while he sleeps.': 'Winks chỉ đầy lên khi cậu ấy ngủ.', Taste: 'Nếm', 'Nothing picked.': 'Chưa chọn gì.', Pantry: 'Kho', 'Empty. The market has more.': 'Trống. Ra chợ mua thêm nhé.',
+    Feed: 'Cho ăn', 'Give a lunchbox': 'Cho một hộp cơm', Fire: 'Cho nghỉ', 'Costs 200 cash. They go back to the street.': 'Tốn 200 cash. Họ quay về phố.', 'Your hamster. Takes one flame for free and gets 10% more portions from it.': 'Hamster của bạn. Đứng một bếp miễn phí và được thêm 10% phần ăn ở bếp đó.', Change: 'Đổi', "Every hamster's energy comes back 1% per round the real hamster sleeps.": 'Sức của mọi hamster hồi 1% mỗi round hamster thật ngủ.', 'A batch takes 8% from a sous chef, a guest takes 0.5% from a waiter.': 'Mỗi mẻ tốn 8% sức bếp phó, mỗi khách tốn 0.5% sức phục vụ.', 'Hire from the street': 'Thuê người ngoài phố', 'In the full game these are your friends. Put someone on cleaning duty if you are annoyed with them.': 'Ở bản đầy đủ đây là bạn bè của bạn. Giận ai thì cho người đó đi lau nhà.', 'The fee grows with your team size.': 'Đội càng đông, phí càng cao.', 'Good at sous work': 'Giỏi việc bếp', 'Good at waiter work': 'Giỏi việc phục vụ', 'Good at cleaner work': 'Giỏi việc dọn dẹp',
+    'In use': 'Đang dùng', 'Yours, tap to use': 'Của bạn, bấm để dùng', Arrange: 'Sắp xếp', 'Finish arranging': 'Xếp xong', 'Arrange the room': 'Sắp xếp phòng', 'Drag furniture around the room, or place what is in your bag.': 'Kéo đồ đạc quanh phòng, hoặc đặt món trong túi đồ.', 'Drag it, or tap a tile to move it.': 'Kéo đi, hoặc bấm vào một ô để chuyển tới.', 'Drag anything in the room to move it, or pick something from your bag.': 'Kéo bất cứ món nào trong phòng, hoặc chọn một món trong túi đồ.', 'Store in bag': 'Cất vào túi', Cancel: 'Hủy', 'It stays in your bag, and you can move something else.': 'Món này vẫn ở trong túi, và bạn có thể di chuyển món khác.', 'It stays where it was, and you can move something else.': 'Món này vẫn ở chỗ cũ, và bạn có thể di chuyển món khác.', 'More room for seats, shy guest decor and kitchen stations.': 'Thêm chỗ cho ghế, đồ cho khách nhút nhát và bếp.', 'A wider room also moves the door along the wall.': 'Phòng rộng ra thì cửa cũng dời theo.', Expand: 'Mở rộng', 'Make the room bigger': 'Mở rộng phòng', 'Your room is as big as it gets.': 'Phòng bạn đã rộng hết cỡ.', 'Your bag': 'Túi đồ', Shop: 'Cửa hàng', 'Walls and floors': 'Tường và sàn', 'Change the whole look of your restaurant. What you buy stays yours.': 'Đổi cả diện mạo nhà hàng. Mua rồi là của bạn luôn.', Walls: 'Tường', 'Dining floor': 'Sàn phòng ăn', 'Kitchen floor': 'Sàn bếp', Buy: 'Mua',
+    'Guest Book': 'Sổ Khách', 'Hover a guest to see what brings them in. On a phone, hold your finger on it.': 'Rê chuột vào khách để xem điều gì khiến họ đến. Trên điện thoại thì giữ ngón tay lên đó.', 'Not met yet': 'Chưa gặp',
+    'Walk over to a neighbour. In the full game these are other players, here they are locals so you can try it out.': 'Sang chơi nhà hàng xóm. Ở bản đầy đủ đây là người chơi khác, còn giờ là dân phố để bạn thử trước.', 'You have visited before.': 'Bạn đã từng ghé.', 'First visit brings a welcome gift.': 'Lần đầu ghé có quà chào mừng.', 'Clean their floor, shake their tree, trade, taste a dish.': 'Lau sàn, rung cây, đổi hàng, nếm món.', 'Welcome gift': 'Quà chào mừng', 'Their floor is spotless now.': 'Sàn nhà họ giờ sạch bong.', 'Tap a dish on their counter to taste it.': 'Bấm vào món trên quầy của họ để nếm.',
+    'Trade ingredients': 'Đổi nguyên liệu', 'Every ingredient has a level, shown as L1 to L4. Give something of the same level or better. Unlocked goods swap now. Locked ones wait for their answer at the next round, and they may say no.': 'Mỗi nguyên liệu có một cấp, từ L1 đến L4. Hãy đưa món cùng cấp hoặc cao hơn. Hàng không khóa đổi ngay. Hàng khóa phải chờ họ trả lời ở round tới, và họ có thể từ chối.', 'You give: ': 'Bạn đưa: ', 'First pick what you give:': 'Trước hết chọn món bạn đưa:', 'Their shelf today:': 'Kệ của họ hôm nay:', 'Locked: asks them first': 'Khóa: phải hỏi họ trước', Unlocked: 'Không khóa', Swap: 'Đổi', 'Asked. They answer at the next round.': 'Đã hỏi. Họ trả lời ở round tới.',
+    Running: 'Đang chạy', 'Catching his breath': 'Đang lấy lại sức', 'Not on the wheel': 'Không ở trên bánh xe', 'Last 24 hours': '24 giờ qua', 'Wheel passes': 'Vòng quay', Distance: 'Quãng đường', 'Rounds with running': 'Số round có chạy', 'Guests the wheel brought': 'Khách do bánh xe mang tới', 'How he runs your kitchen': 'Cậu ấy vận hành bếp của bạn thế nào', 'When he runs': 'Khi cậu ấy chạy', 'Guests walk in, woks fire, staff tire': 'Khách vào, chảo bốc lửa, nhân viên mệt dần', 'When he sleeps': 'Khi cậu ấy ngủ', 'Pots simmer, Winks fill, staff rest': 'Nồi liu riu, Winks đầy dần, nhân viên nghỉ', 'When he wakes': 'Khi cậu ấy thức', 'His dream becomes a dish': 'Giấc mơ thành món ăn', 'Nothing counts, nothing is lost': 'Không tính gì, không mất gì',
+    'Nothing here can wake him or ask him to run. His care policy puts rest first, and so does this kitchen: food never spoils, and a quiet day just means more Winks.': 'Không gì ở đây đánh thức được cậu ấy hay bắt cậu ấy chạy. Chính sách chăm sóc đặt giấc ngủ lên đầu, căn bếp này cũng vậy: đồ ăn không bao giờ hỏng, ngày yên tĩnh chỉ có nghĩa là thêm Winks.',
+    'Latest settled round': 'Round vừa chốt', Round: 'Round', Passes: 'Vòng quay', 'Current round': 'Round hiện tại', 'Last data hash': 'Hash dữ liệu mới nhất', Contract: 'Hợp đồng', unknown: 'không rõ', none: 'không có', 'A round with no passes shows no accepted work. It does not prove he was asleep, the sensor only counts passes.': 'Round không có vòng quay chỉ cho thấy không có work được chấp nhận. Nó không chứng minh cậu ấy đang ngủ, cảm biến chỉ đếm vòng quay.',
+    'Sir Slowbite, the tortoise critic': 'Ngài Nhai Chậm, nhà phê bình rùa', 'Sir Slowbite': 'Ngài Nhai Chậm', 'He arrives when the wheel next starts after a long sleep. Name three dishes. A portion of each is set aside if you have one, otherwise it must be on the counter when he comes.': 'Ông ấy đến khi bánh xe quay lại sau một giấc ngủ dài. Hãy chọn ba món. Mỗi món được để dành một phần nếu bạn có sẵn, nếu không thì phải có trên quầy lúc ông ấy đến.', 'He visits after every seventh long sleep.': 'Cứ sau bảy giấc ngủ dài ông ấy ghé một lần.', 'Overheard in dreams:': 'Nghe lỏm trong mơ:', 'Guest book trophies': 'Cúp sổ khách', 'His first long sleep will write the first page.': 'Giấc ngủ dài đầu tiên của cậu ấy sẽ viết trang đầu.', Lately: 'Gần đây', 'Nothing yet.': 'Chưa có gì.',
+    // Bag, shelf, mailbox, leaderboard
+    'No neighbour has it out today.': 'Hôm nay không hàng xóm nào có.', 'A rare find, no shop sells it.': 'Món hiếm tìm được, không cửa hàng nào bán.', 'A bit of junk you found.': 'Đồ linh tinh bạn nhặt được.', 'Pick something to place it or sell it.': 'Chọn một món để đặt hoặc bán.', 'Nothing yet. Shake trees and sweep floors, things turn up.': 'Chưa có gì. Rung cây và lau sàn, sẽ có thứ rơi ra.', 'Nothing here. The Decor shop has plenty.': 'Chưa có gì. Cửa hàng trong Đồ đạc có nhiều lắm.', Place: 'Đặt', 'Place it': 'Đặt vào phòng', 'It goes into your room. Pick a tile.': 'Món này vào phòng của bạn. Chọn một ô.', 'Sell it': 'Bán đi',
+    'This house': 'Nhà này', 'Clean, shake, taste and trade here.': 'Lau sàn, rung cây, nếm món và đổi hàng ở đây.', Neighbours: 'Hàng xóm', 'Walk over to someone else.': 'Sang nhà người khác.', Leaderboard: 'Xếp hạng', 'Who has the highest restaurant level.': 'Ai có nhà hàng cấp cao nhất.', 'Your shelf': 'Kệ của bạn', 'Hang up ingredients for neighbours to trade.': 'Treo nguyên liệu cho hàng xóm đổi.', Mailbox: 'Hòm thư', 'Trade offers and answers.': 'Lời đề nghị đổi hàng và câu trả lời.', 'Ranked by restaurant level, then house level. In the full game these are other players.': 'Xếp theo cấp nhà hàng, rồi đến mức nhà. Ở bản đầy đủ đây là người chơi khác.', Visit: 'Ghé thăm',
+    'Hang up ingredients for neighbours to trade for. They always give the same level or better. Unlocked: they swap on their own. Locked: they ask first, and the offer waits in your mailbox.': 'Treo nguyên liệu lên để hàng xóm đổi. Họ luôn đưa món cùng cấp hoặc cao hơn. Không khóa: họ tự đổi. Có khóa: họ hỏi trước, lời đề nghị nằm trong hòm thư.', 'Locked: asks you first': 'Khóa: hỏi bạn trước', 'Unlocked: swaps on its own': 'Không khóa: tự đổi', Locked: 'Có khóa', 'Offers wait for your answer. Click to unlock.': 'Lời đề nghị chờ bạn trả lời. Bấm để mở khóa.', 'Neighbours swap on their own. Click to lock.': 'Hàng xóm tự đổi. Bấm để khóa.', 'Hang one more': 'Treo thêm một', Take: 'Lấy về', 'Take it all back': 'Lấy về hết', 'Take one back': 'Lấy về một', 'It goes back to your pantry.': 'Món này về lại kho.', 'Nothing hanging yet. Pick something from your pantry below.': 'Chưa treo gì. Chọn một món trong kho bên dưới.', 'From your pantry': 'Từ kho của bạn',
+    'Offers for what you locked on your shelf wait here for two days. Answers to what you asked for come here too.': 'Lời đề nghị cho món bạn khóa trên kệ nằm ở đây hai ngày. Câu trả lời cho món bạn hỏi đổi cũng về đây.', 'No offers waiting.': 'Không có lời đề nghị nào.', Accept: 'Đồng ý', Decline: 'Từ chối', 'Your ingredient stays on the shelf.': 'Nguyên liệu của bạn vẫn ở trên kệ.', Answers: 'Trả lời', Clear: 'Xóa', 'Throw away these notes.': 'Xóa các ghi chú này.',
+    'Their mailbox': 'Hòm thư của họ', 'Nothing for you in there.': 'Trong đó không có gì cho bạn.', 'Your mailbox': 'Hòm thư của bạn', 'Empty. Click to open.': 'Trống. Bấm để mở.', 'A new trade offer is in your mailbox.': 'Có lời đề nghị đổi hàng mới trong hòm thư.', 'Swapped on your shelf': 'Đã đổi trên kệ', 'New offers in your mailbox': 'Lời đề nghị mới trong hòm thư',
+    'That offer has gone.': 'Lời đề nghị đó không còn nữa.', 'That is no longer on your shelf.': 'Món đó không còn trên kệ của bạn.', 'Your shelf is full. More room comes with levels.': 'Kệ của bạn đã đầy. Lên cấp sẽ có thêm chỗ.', 'That is not on your shelf.': 'Món đó không có trên kệ của bạn.', 'This one cannot be sold.': 'Món này không bán được.', 'They have run out of that today.': 'Hôm nay họ hết món đó rồi.',
+    // Buttons
+    'Pick a dish': 'Chọn món', 'Buy what is missing and cook': 'Mua phần còn thiếu rồi nấu', 'Pack a lunchbox': 'Gói một hộp cơm', 'You need more ingredients, shown in red.': 'Bạn thiếu nguyên liệu, phần tô đỏ.', 'Already full of energy.': 'Đã đầy sức.', 'Name, fur, hat and the name of your restaurant.': 'Tên, bộ lông, mũ và tên nhà hàng.', 'It goes into your bag.': 'Món này sẽ vào túi đồ.', 'It leaves the room and waits in your bag.': 'Rời khỏi phòng và nằm chờ trong túi đồ.', 'First pick what you give.': 'Trước hết chọn món bạn đưa.', 'They answer at the next round.': 'Họ trả lời ở round tới.', 'It swaps right away.': 'Đổi ngay lập tức.', 'Takes one portion.': 'Dùng một phần.', 'Click to clean it: +2 tidiness, +1 cash.': 'Bấm để lau: +2 độ sạch, +1 cash.', 'Tidy floors keep tips up.': 'Sàn sạch giữ tip cao.', 'Legendary guests follow it.': 'Khách huyền thoại sẽ theo mùi tới.',
+    // House facts
+    'It goes up each time the room expands.': 'Mỗi lần mở rộng phòng là lên một mức.', 'Click here for trades and hiring.': 'Bấm vào đây để đổi hàng và thuê người.',
+    // Engine messages
+    'He remembers a dish with only one ingredient.': 'Ông ấy nhớ một món chỉ có đúng một nguyên liệu.', 'He looked at the empty counter, wrote one word, and left.': 'Ông ấy nhìn quầy trống, viết đúng một chữ rồi đi.', 'Three stars. He finished everything, slowly.': 'Ba sao. Ông ấy ăn hết sạch, thật chậm.', 'Competent, he says. He ate the whole plate though.': 'Ông ấy bảo tạm được. Nhưng vẫn ăn hết đĩa.', 'He took two bites and said it was a start.': 'Ông ấy cắn hai miếng và bảo đây là khởi đầu.', 'He said nothing at all, which is worse.': 'Ông ấy chẳng nói gì, thế còn tệ hơn.', 'Sir Slowbite is coming after the next long sleep. Choose what he will taste.': 'Ngài Nhai Chậm sẽ đến sau giấc ngủ dài tới. Hãy chọn món cho ông ấy nếm.',
+    'Nothing to cook.': 'Không có gì để nấu.', 'That station is busy.': 'Bếp này đang bận.', 'That dream has faded.': 'Giấc mơ đó đã phai.', 'You do not know that recipe yet.': 'Bạn chưa biết công thức này.', 'Every cook is busy or out of energy. Hire a sous chef, or wait for his next sleep.': 'Đầu bếp nào cũng bận hoặc hết sức. Thuê thêm bếp phó, hoặc chờ giấc ngủ tới của cậu ấy.', 'Not at the market today.': 'Hôm nay chợ không có món này.', 'Not enough left at the stall.': 'Chợ không còn đủ hàng.', 'Not enough cash.': 'Không đủ cash.', 'Pick up to three ingredients.': 'Chọn tối đa ba nguyên liệu.', 'You already know everything that goes in.': 'Bạn đã biết hết mọi thứ trong món này.', 'You do not know that recipe.': 'Bạn không biết công thức này.', 'That dish is as good as it gets.': 'Món này đã ngon hết mức.', 'The lunch shelf is full.': 'Kệ hộp cơm đã đầy.', 'A lunchbox needs 1 Rolled Oats.': 'Một hộp cơm cần 1 Yến Mạch Cán.', 'No such hamster.': 'Không có hamster này.', 'No lunchboxes packed.': 'Chưa gói hộp cơm nào.', 'Nobody by that name.': 'Không có ai tên vậy.', 'You cannot fire yourself.': 'Bạn không thể tự cho mình nghỉ.', 'Firing costs 200 cash.': 'Cho nghỉ tốn 200 cash.', 'They are still cooking.': 'Họ vẫn đang nấu.', 'The kitchen is full.': 'Bếp đã đầy.', 'The kitchen wall is full. Expand the room first.': 'Tường bếp đã kín. Hãy mở rộng phòng trước.', 'The room is as big as it gets.': 'Phòng đã rộng hết cỡ.', 'Unknown style.': 'Kiểu này không tồn tại.', 'Out of the room.': 'Nằm ngoài phòng.', 'Something is already there.': 'Chỗ đó đã có đồ.', 'Keep the door clear.': 'Đừng chắn cửa.', 'There is a rug there already.': 'Chỗ đó đã có thảm.', 'Unknown item.': 'Món đồ không tồn tại.', 'This one cannot be bought.': 'Món này không bán.', 'You do not have one.': 'Bạn không có món này.', 'You do not have one in the bag.': 'Trong túi không có món này.', 'That party has gone home.': 'Đoàn khách đó về rồi.', 'Already clean.': 'Đã sạch rồi.', 'You already shook their tree today.': 'Hôm nay bạn đã rung cây của họ rồi.', 'One taste a day is manners.': 'Mỗi ngày nếm một món mới là lịch sự.', 'They do not have that today.': 'Hôm nay họ không có món đó.', 'You do not have that to give.': 'Bạn không có món đó để đổi.',
+    'Live from the official Squeekchain API and SqueekCore on Sepolia.': 'Trực tiếp từ API chính thức của Squeekchain và SqueekCore trên Sepolia.',
+    // The daily question
+    'Which lettuce is safe for a hamster?': 'Loại xà lách nào an toàn cho hamster?', Romaine: 'Romaine', Iceberg: 'Xà lách búp', 'Any lettuce': 'Loại nào cũng được', None: 'Không loại nào', 'Romaine only, never iceberg.': 'Chỉ romaine, không bao giờ dùng xà lách búp.',
+    'What must you remove from an apple slice?': 'Phải bỏ gì khỏi lát táo?', 'The seeds': 'Hạt', 'The skin': 'Vỏ', 'The stalk only': 'Chỉ cuống', Nothing: 'Không gì cả', 'Apple seeds are toxic.': 'Hạt táo có độc.',
+    'Which potato can a hamster have?': 'Hamster ăn được loại khoai nào?', 'Sweet potato': 'Khoai lang', 'White potato': 'Khoai tây trắng', 'Green potato': 'Khoai tây xanh', Crisps: 'Snack khoai tây', 'Regular potato is unsafe.': 'Khoai tây thường không an toàn.',
+    'How should peppers be for a hamster?': 'Ớt cho hamster phải là loại nào?', Sweet: 'Ngọt', Spicy: 'Cay', Pickled: 'Muối chua', 'Dried with salt': 'Phơi với muối', 'Sweet peppers only.': 'Chỉ dùng ớt ngọt.',
+    'What is the smallest wheel the Squeektoshi care policy allows?': 'Chính sách chăm sóc Squeektoshi cho phép bánh xe nhỏ nhất là bao nhiêu?', 'At least 30 cm, solid surface.': 'Ít nhất 30 cm, mặt chạy đặc.',
+    'How deep should burrowing bedding be, says the care policy?': 'Theo chính sách chăm sóc, lớp lót để đào hang nên sâu bao nhiêu?', '25 to 30 cm': '25 đến 30 cm', 'None needed': 'Không cần', 'Syrian hamsters dig.': 'Hamster Syria thích đào hang.',
+    'Does the care policy allow waking him to mine?': 'Chính sách chăm sóc có cho đánh thức cậu ấy để đào block không?', Never: 'Không bao giờ', 'Only at night': 'Chỉ ban đêm', 'If blocks are slow': 'Nếu block chậm', 'On weekends': 'Cuối tuần', 'Only freely chosen running is recorded.': 'Chỉ ghi nhận việc cậu ấy tự chọn chạy.',
+    'What does one work unit count?': 'Một đơn vị work đếm cái gì?', 'One accepted wheel magnet passage': 'Một lần nam châm bánh xe đi qua được chấp nhận', 'One Ethereum block': 'Một block Ethereum', 'One minute of running': 'Một phút chạy', 'One SQK': 'Một SQK', 'Each passage of the magnet is one work unit.': 'Mỗi lần nam châm đi qua là một đơn vị work.',
+    'How long is a round?': 'Một round dài bao lâu?', '10 minutes': '10 phút', '1 minute': '1 phút', '1 hour': '1 giờ', '1 day': '1 ngày', 'Rounds are 600 seconds.': 'Mỗi round là 600 giây.',
+    'What does a zero work round prove?': 'Một round không có work chứng minh điều gì?', 'No accepted work': 'Không có work được chấp nhận', 'He was definitely asleep': 'Cậu ấy chắc chắn đang ngủ', 'The chain stopped': 'Chuỗi đã dừng', 'He ran backwards': 'Cậu ấy chạy lùi', 'It does not prove the wheel was watched.': 'Nó không chứng minh bánh xe được theo dõi.',
+    'Why give a hamster a sand bath?': 'Vì sao nên cho hamster tắm cát?', 'To clean his fur': 'Để làm sạch lông', 'To cook in': 'Để nấu ăn trong đó', 'To scare him': 'Để dọa cậu ấy', 'As food': 'Làm thức ăn', 'Low dust, additive free sand keeps coats clean.': 'Cát ít bụi, không phụ gia giúp lông sạch.',
+    'What should a hamster eat most of?': 'Hamster nên ăn gì nhiều nhất?', 'Complete hamster food': 'Thức ăn hamster đầy đủ dinh dưỡng', Mango: 'Xoài', 'Seeds only': 'Chỉ hạt', Egg: 'Trứng', 'Everything else here is a small treat.': 'Mọi thứ khác ở đây chỉ là món thưởng nhỏ.',
+    'The Tiny Table': 'Quán Tí Hon',
+  }));
+
+  const STATE_WORD = (w) => tr(w);
+  const PATTERNS = [
+    // One or many
+    [/^Another street\. (\d+) moves? left today\.$/, 'Đã sang phố khác. Hôm nay còn $1 lượt.'],
+    [/^(\d+) sleeping rounds? left, on hold until he stops running$/, 'Còn $1 round ngủ, tạm dừng tới khi cậu ấy nghỉ chạy'],
+    [/^(\d+) sleeping rounds? left, about ([\d.]+) h$/, 'Còn $1 round ngủ, khoảng $2 giờ'],
+    [/^([\d,]+) pass(?:es)? left, waiting for the wheel$/, 'Còn $1 vòng, chờ bánh xe'],
+    [/^([\d,]+) pass(?:es)? left$/, 'Còn $1 vòng'],
+    [/^([\d,]+) portions? on the counter, (\d+) seats?, (\d+) lunchbox(?:es)?$/, '$1 phần trên quầy, $2 ghế, $3 hộp cơm'],
+    [/^(\d+) seat$/, '$1 ghế'],
+    [/^(\d+) round$/, '$1 round'],
+    [/^Room (\d+) by (\d+) tiles, (\d+) seats?, up to (\d+) guests a round\.$/, 'Phòng $1 x $2 ô, $3 ghế, tối đa $4 khách mỗi round.'],
+    [/^1 kind of guest looks for this: (.+)\.$/, '1 loài khách tìm món này: $1.'],
+    [/^Level (\d+) allows (\d+) (sous chef|waiter|cleaner)\.$/, (m) => `Cấp ${m[1]} cho phép ${m[2]} ${{ 'sous chef': 'bếp phó', waiter: 'phục vụ', cleaner: 'tạp vụ' }[m[3]]}.`],
+    [/^1 star earned$/, 'Đã được 1 sao'],
+    // Reworded English
+    [/^A taste costs (\d+) Winks\.$/, 'Mỗi lần nếm tốn $1 Wink.'],
+    [/^A hint costs (\d+) Winks\.$/, 'Một gợi ý tốn $1 Wink.'],
+    [/^A Dream Dish costs (\d+) Winks\.$/, 'Món Trong Mơ tốn $1 Wink.'],
+    [/^You don't have enough (.+)\.$/, 'Bạn không đủ $1.'],
+    [/^You need (.+) x(\d+)\.$/, 'Bạn cần $2 $1.'],
+    [/^That dish has to be made in the pot\.$/, 'Món này phải nấu trong nồi.'],
+    [/^That dish has to be made on the (.+)\.$/, 'Món này phải làm trên $1.'],
+    [/^Charm \+(\d+)\. Only the first one of its kind counts\.$/, 'Sức hút +$1. Mỗi loại chỉ tính món đầu tiên.'],
+    [/^(.+), served (\d+) times?$/, '$1, đã phục vụ $2 lần'],
+    [/^You already know this one: (.+)\.$/, 'Bạn biết món này rồi: $1.'],
+    [/^Your hamster senses something here, but can't make it until level (\d+)\.$/, 'Hamster của bạn đánh hơi được gì đó, nhưng phải tới cấp $1 mới làm được.'],
+    [/^(\d+) sleeping rounds left, on hold until he stops running$/, 'Còn $1 round ngủ, tạm dừng tới khi cậu ấy nghỉ chạy'],
+    [/^He passed (\d+) km! Festival: 25% more tips for a day\. Bunting is in your bag\.$/, 'Cậu ấy đạt $1 km! Lễ hội: tip thêm 25% trong một ngày. Có cờ dây trong túi.'],
+    [/^He napped and woke up\. You found (.+) x(\d+)\.$/, 'Cậu ấy chợp mắt rồi dậy. Bạn nhặt được $2 $1.'],
+    [/^Another street \((\d+) left\)$/, 'Sang phố khác (còn $1)'],
+    [/^(.+) welcomes you with (.+) x(\d+)\.$/, '$1 chào đón bạn bằng $3 $2.'],
+    [/^Found (.+) x(\d+)\.$/, 'Tìm được $2 $1.'],
+    [/^He likes ([^.]+) and ([^.]+) dishes\. The dish he missed most was (.+)\.$/, 'Ông ấy thích món $1 và $2. Món ông ấy nhớ nhất là $3.'],
+    [/^You got (.+) x(\d+)\.$/, 'Bạn nhận được $2 $1.'],
+    [/^They also bring (.+) x(\d+) ?$/, 'Họ còn mang $2 $1 '],
+    [/^They also brought (.+) x(\d+)\.$/, 'Họ còn mang $2 $1.'],
+    [/^Buy (.+) x(\d+)$/, 'Mua $2 $1'],
+    [/^(\d+) guests? inside, (\d+) on the road\.$/, '$1 khách trong nhà, $2 khách ngoài đường.'],
+    [/^(\d+) guests? on the road\.$/, '$1 khách ngoài đường.'],
+    [/^(\d+) guests? inside\.$/, '$1 khách trong nhà.'],
+    // The world outside
+    [/^(\d+) LEFT$/, 'CÒN $1'],
+    [/^(\d+) of (\d+) moves left today\.$/, 'Hôm nay còn $1 trên $2 lượt.'],
+    [/^Other street \((\d+) left\)$/, 'Sang phố khác (còn $1)'],
+    [/^Another street\. (\d+) moves left today\.$/, 'Đã sang phố khác. Hôm nay còn $1 lượt.'],
+    [/^Leaderboard #(\d+)$/, 'Xếp hạng #$1'],
+    [/^You are #(\d+) of (\d+)\.$/, 'Bạn đứng #$1 trên $2.'],
+    [/^(.+)'s tree$/, (m) => `Cây của ${m[1]}`],
+    [/^(\d+) of (\d+) spots in use\.$/, 'Đã dùng $1 trên $2 chỗ.'],
+    [/^(\d+) guests inside, (\d+) on the road\.$/, '$1 khách trong nhà, $2 khách ngoài đường.'],
+    [/^(\d+) guests on the road\.$/, '$1 khách ngoài đường.'],
+    [/^(\d+) guests inside\.$/, '$1 khách trong nhà.'],
+    [/^(\d+) waiting in your mailbox\.$/, '$1 thư trong hòm.'],
+    [/^(.+), day (\d+) of (\d+)$/, (m) => `${m[1]}, ngày ${m[2]} trên ${m[3]}`],
+    [/^tips \+(\d+)%\.$/, 'tip +$1%.'],
+    [/^Charm (\d+): about (\d+)% more guests walk in\.$/, 'Sức hút $1: khách vào thêm khoảng $2%.'],
+    [/^Charm (\d+)$/, 'Sức hút $1'],
+    [/^charm \+(\d+)$/, 'sức hút +$1'],
+    [/^Charm \+(\d+), the first of its kind draws more guests in\.$/, 'Sức hút +$1, món đầu tiên của mỗi loại kéo thêm khách.'],
+    [/^Rating \+(\d+), charm \+(\d+) while in use$/, 'Đánh giá +$1, sức hút +$2 khi đang dùng'],
+    // Amounts
+    [/^([\d.]+) h$/, '$1 giờ'], [/^(\d+) min$/, '$1 phút'], [/^([\d,]+) wheel passes$/, '$1 vòng quay'], [/^(\d+) rounds of sleep$/, '$1 round ngủ'], [/^([\d,]+) cash$/, '$1 cash'], [/^(\d+) of (\d+)$/, '$1/$2'],
+    [/^([\d,]+) portions$/, '$1 phần'], [/^([\d,]+) each$/, 'mỗi phần $1'], [/^profit about ([\d,-]+)$/, 'lời khoảng $1'], [/^made (\d+)x$/, 'đã nấu $1 lần'], [/^([\d,]+) cash each$/, '$1 cash mỗi món'], [/^(\d+) left$/, 'còn $1'], [/^you have (\d+)$/, 'bạn có $1'], [/^from level (\d+)$/, 'từ cấp $1'], [/^level (\d+)$/, 'cấp $1'], [/^(\d+) placed$/, 'đã đặt $1'], [/^rating \+(\d+)$/, 'đánh giá +$1'], [/^([\d,]+) seats$/, '$1 ghế'], [/^up to ([\d,]+) guests a round$/, 'tối đa $1 khách mỗi round'], [/^tips \+(\d+)%$/, 'tip +$1%'], [/^tidiness (\d+)%$/, 'độ sạch $1%'], [/^rating ([\d.]+) of 5$/, 'đánh giá $1/5'], [/^(\d+) guests$/, '$1 khách'], [/^(\d+) rounds?$/, '$1 round'],
+    // House facts
+    [/^House level (\d+) of (\d+)(\.?)$/, 'Nhà mức $1/$2$3'], [/^Room (\d+)x(\d+)$/, 'Phòng $1x$2'], [/^Room (\d+) by (\d+)$/, 'Phòng $1 x $2'], [/^Rating ([\d.]+)$/, '$1 sao'], [/^Rating ([\d.]+) of 5\.$/, 'Đánh giá $1/5.'], [/^Room (\d+) by (\d+) tiles, (\d+) seats, up to (\d+) guests a round\.$/, 'Phòng $1 x $2 ô, $3 ghế, tối đa $4 khách mỗi round.'], [/^Next: (\d+) by (\d+) tiles for (.+ cash), from level (\d+)\.$/, 'Tiếp theo: $1 x $2 ô, giá $3, từ cấp $4.'], [/^House level (\d+) of (\d+), room (\d+) by (\d+)\.$/, 'Nhà mức $1/$2, phòng $3 x $4.'], [/^Level (\d+) of (\d+)$/, 'Mức $1/$2'],
+    // Tips and rows
+    [/^Level (\d+) ingredient$/, 'Nguyên liệu cấp $1'], [/^(On the stove|On the wok|In the pot), (.+?)\.?$/, '$1, $2'], [/^([\d,]+) portions, (\d+) cash each before tips$/, '$1 phần, mỗi phần $2 cash chưa tính tip'], [/^([\d,]+) on the counter$/, '$1 phần trên quầy'], [/^Takes: (.+)$/, 'Cần: $1'], [/^About (\d+) cash at the market$/, 'Khoảng $1 cash ở chợ'], [/^You use it in: (.+)$/, 'Dùng trong: $1'], [/^(.+ cash), from level (\d+)(\.?)$/, '$1, từ cấp $2$3'], [/^Rating \+(\d+)\. Size (\d+) by (\d+) tiles\.$/, 'Đánh giá +$1. Kích thước $2 x $3 ô.'], [/^(\d+) seats?, must touch a table\.$/, '$1 ghế, phải sát bàn.'], [/^Each seat feeds (\d+) guests a round\. It must touch a table\.$/, 'Mỗi ghế phục vụ $1 khách mỗi round. Phải sát bàn.'], [/^(\d+) kinds of guest look for this: (.+?)( and more)?\.$/, '$1 loài khách tìm món này: $2$3.'],
+    [/^(.+), served (\d+) times$/, '$1, đã phục vụ $2 lần'], [/^(.+), not met yet$/, '$1, chưa gặp'], [/^Needs restaurant level (\d+)$/, 'Cần nhà hàng cấp $1'], [/^Looks for: (.+)$/, 'Tìm: $1'], [/^Needs a (.+) dish on the counter$/, 'Cần món vị $1 trên quầy'], [/^Energy (\d+)%\. Comes back while he sleeps\.$/, 'Sức $1%. Hồi lại khi cậu ấy ngủ.'],
+    // Effects of decor
+    [/^Floor stays tidier: \+([\d.]+) tidiness per busy round\.?$/, 'Sàn sạch hơn: +$1 độ sạch mỗi round đông khách.'], [/^Tables turn over (\d+%) faster\.?$/, 'Bàn quay vòng nhanh hơn $1.'], [/^(.+) dishes earn (\d+%) more\.?$/, 'Món vị $1 lời thêm $2.'], [/^Stove dishes cook (\d+%) faster\.?$/, 'Món bếp lò nấu nhanh hơn $1.'], [/^Stove batches make (\d+%) more\.?$/, 'Mẻ trên bếp lò nhiều hơn $1.'], [/^Wok batches make (\d+%) more\.?$/, 'Mẻ trên chảo nhiều hơn $1.'], [/^Pot batches make (\d+%) more\.?$/, 'Mẻ trong nồi nhiều hơn $1.'], [/^Waiters tire (\d+%) slower\.?$/, 'Phục vụ lâu mệt hơn $1.'], [/^Sous chefs tire (\d+%) slower\.?$/, 'Bếp phó lâu mệt hơn $1.'], [/^Lunchboxes give \+(\d+) energy\.?$/, 'Hộp cơm cho thêm +$1 sức.'], [/^Earns (\d+) cash per busy round\.?$/, 'Kiếm $1 cash mỗi round đông khách.'], [/^Tips \+(\d+%)\.?$/, 'Tip +$1.'], [/^Rare guests (\d+%) more likely\.?$/, 'Khách hiếm dễ đến hơn $1.'], [/^\+1 Wink every (\d+) quiet rounds\.?$/, '+1 Wink mỗi $1 round yên tĩnh.'], [/^Market (\d+%) cheaper\.?$/, 'Chợ rẻ hơn $1.'], [/^Quiet guests pay (\d+%) more\.?$/, 'Khách yên tĩnh trả thêm $1.'],
+    // Kitchen
+    [/^Again ([\d,]+)$/, 'Nấu lại $1'], [/^Add a (.+)$/, 'Thêm $1'], [/^Needs a room with space for (\d+) stations\.$/, 'Cần phòng đủ chỗ cho $1 bếp.'], [/^Next station: (.+), level (\d+), (.+)\.$/, 'Bếp tiếp theo: $1, cấp $2, $3.'], [/^Costs (\d+) Winks\.$/, 'Tốn $1 Winks.'], [/^Gives \+(\d+) energy\.$/, 'Cho +$1 sức.'], [/^(\d+) packed$/, 'Đã gói $1'], [/^(\d+) stations? cooking again\.$/, '$1 bếp đang nấu lại.'], [/^Free up a (.+) first\.$/, 'Hãy để trống $1 trước.'], [/^Buy ([\d,]+) \+ cook$/, 'Mua $1 + nấu'],
+    [/^(.+) went home happy$/, '$1 đã vui vẻ ra về'], [/^(.+)'s party$/, 'Đoàn của $1'], [/^Wants (\d+) $/, 'Muốn $1 phần vị '], [/^ portions\. You have ([\d,]+)\.$/, '. Bạn có $1.'], [/^Parties delivered so far: (\d+)\.$/, 'Đã giao: $1 đoàn.'],
+    [/^Pays (.+? cash)( and (\d+) Winks)?(, and you meet them)?\.$/, (m) => `Trả ${m[1]}${m[3] ? ` và ${m[3]} Winks` : ''}${m[4] ? ', và bạn được gặp họ' : ''}.`],
+    [/^(.+)'s party paid (.+? cash)( and (\d+) Winks)?\.$/, (m) => `Đoàn của ${tr(m[1])} trả ${m[2]}${m[4] ? ` và ${m[4]} Winks` : ''}.`],
+    [/^Upgrade: (.+ cash) and $/, 'Nâng cấp: $1 và '], [/^Hint (\d+)$/, 'Gợi ý $1'], [/^(\d+) Winks shows one thing that goes in\.$/, '$1 Winks để biết một nguyên liệu trong món.'], [/^That dish has (.+) in it\.$/, 'Món đó có $1.'], [/^New recipe: (.+?)\.?$/, 'Công thức mới: $1'], [/^It is (.+)\.$/, 'Đây là $1.'], [/^Your hamster senses something here, but cannot make it until level (\d+)\.$/, 'Hamster của bạn thấy có gì đó, nhưng phải tới cấp $1 mới làm được.'], [/^Close\. (\d+) of these go together in a dish you have not found yet\.$/, 'Gần đúng. $1 thứ này đi cùng nhau trong một món bạn chưa tìm ra.'], [/^Each try costs (\d+) Winks and uses one of each\.$/, 'Mỗi lần thử tốn $1 Winks và dùng mỗi thứ một phần.'], [/^You have (\d+)\.$/, 'Bạn có $1.'],
+    [/^(\d+) lunchboxes packed\.$/, 'Đã gói $1 hộp cơm.'], [/^\+(\d+) energy$/, '+$1 sức'], [/^(.+), head chef$/, '$1, bếp trưởng'], [/^Your team: (\d+\/\d+) sous chefs, (\d+\/\d+) waiters, (\d+\/\d+) cleaners$/, 'Đội của bạn: $1 bếp phó, $2 phục vụ, $3 tạp vụ'], [/^(Sous|Waiter|Cleaner) ([\d,]+)$/, '$1 $2'],
+    [/^Rating \+(\d+) while in use$/, 'Đánh giá +$1 khi đang dùng'], [/^Grows to (\d+) by (\d+) tiles\.$/, 'Rộng ra thành $1 x $2 ô.'], [/^Expand to (\d+) by (\d+)$/, 'Mở rộng lên $1 x $2'], [/^The room grew to (\d+) by (\d+) tiles\.$/, 'Phòng đã rộng ra $1 x $2 ô.'], [/^(.+) is in your bag\. Tap Arrange to place it\.$/, '$1 đã vào túi đồ. Bấm Sắp xếp để đặt.'],
+    [/^(\d+) of (\d+) met$/, 'Đã gặp $1/$2'], [/^Run by (.+)\.$/, 'Chủ quán: $1.'], [/^Tap the dirt on their floor to clean it: (\d+) spots? left today\. (.*)$/, (m) => `Bấm vào chỗ dơ trên sàn nhà họ để lau: hôm nay còn ${m[1]} chỗ. ${tr(m[2])}`], [/^Tap the dirt to clean it: (\d+) spots? left\.$/, 'Bấm vào chỗ dơ để lau: còn $1 chỗ.'], [/^(.+) also works in your kitchen\.$/, '$1 cũng đang làm trong bếp của bạn.'], [/^Hire (.+) as a sous chef\.$/, 'Thuê $1 làm bếp phó.'], [/^Hire (.+) as a waiter\.$/, 'Thuê $1 làm phục vụ.'], [/^Hire (.+) as a cleaner\.$/, 'Thuê $1 làm tạp vụ.'], [/^Hire ([\d,]+)$/, 'Thuê $1'], [/^Needs L(\d) or better from you$/, 'Bạn cần đưa L$1 trở lên'], [/^Swapped for (.+)\.$/, 'Đã đổi lấy $1.'],
+    [/^Replaying Squeektoshi's real rounds from (.+) to (.+), keeping the time of day\.$/, 'Đang phát lại các round thật của Squeektoshi từ $1 đến $2, giữ nguyên giờ trong ngày.'], [/^Squeektoshi: (.+)$/, 'Squeektoshi: $1'], [/^(\d+) turns a minute$/, '$1 vòng mỗi phút'], [/^Running at (\d+) turns a minute\.$/, 'Đang chạy $1 vòng mỗi phút.'],
+    [/^Prep list, (\d+) of (\d+) done$/, 'Việc cần làm, xong $1/$2'], [/^\+(\d+) cash$/, '+$1 cash'], [/^(\d+) to go\.$/, 'Còn $1 lần nữa.'], [/^(\d+) stars earned$/, 'Đã có $1 sao'], [/^, last visit (\d+)$/, ', lần trước $1 sao'], [/^Dream journal, (\d+) of (\d+)$/, 'Sổ giấc mơ, $1/$2'],
+    [/^Your picks: (.+)$/, (m) => 'Món đã chọn: ' + m[1].replace(/ \(set aside\)/g, ' (đã để dành)').replace(/ \(not ready\)/g, ' (chưa sẵn)').replace('none yet', 'chưa có')],
+    // Hud and world
+    [/^(.+) more is in the till and reaches you when this round settles\.$/, '$1 nữa đang trong két, vào túi khi round này chốt.'], [/^Holds up to (\d+)\.$/, 'Giữ tối đa $1.'], [/^Restaurant level (\d+)$/, 'Nhà hàng cấp $1'], [/^([\d,]+) of ([\d,]+) toward the next level\.$/, '$1/$2 để lên cấp tiếp theo.'], [/^Lv (\d+)$/, 'Cấp $1'], [/^RUNNING (\d+) RPM$/, 'ĐANG CHẠY $1 RPM'], [/^AT (.+)$/, 'Ở $1'], [/^QUIET FOR ([\d.]+) HOURS$/, 'YÊN TĨNH $1 GIỜ'], [/^Quiet for ([\d.]+) hours$/, 'Yên tĩnh $1 giờ'], [/^Round ends (.+)$/, 'Hết round sau $1'],
+    [/^Click to clean it for ([\d,]+) cash\.$/, 'Bấm để lau, được $1 cash.'], [/^(\d+) shakes? left today\.$/, 'Hôm nay còn $1 lượt.'], [/^([\d,]+) portions when it is done$/, '$1 phần khi nấu xong'], [/^Next: (.+), (.+ cash), level (\d+)\.$/, 'Tiếp theo: $1, $2, cấp $3.'], [/^Click to taste it for ([\d,]+) cash, once a day\. It may give away a recipe\.$/, 'Bấm để nếm, giá $1 cash, mỗi ngày một lần. Có thể lộ công thức.'], [/^Waiting for (.+)$/, 'Đang chờ $1'], [/^Eating (.+)$/, 'Đang ăn $1'],
+    [/^Done: (.+)\. \+(\d+) cash$/, 'Xong: $1. +$2 cash'], [/^(\d+) prep list jobs done\. \+(\d+) cash$/, 'Xong $1 việc. +$2 cash'], [/^(.+) is ready: ([\d,]+) portions on the counter\.$/, '$1 đã xong: $2 phần trên quầy.'], [/^Round settled\. (.+ cash) banked\.$/, 'Round đã chốt. $1 vào túi.'], [/^He passed ([\d,]+) km! Festival: 25% more tips for a day\. Bunting in your bag\.$/, 'Cậu ấy đã chạy được $1 km! Lễ hội: tip tăng 25% trong một ngày. Có cờ dây trong túi đồ.'], [/^He napped and woke up\. You found 2 (.+)\.$/, 'Cậu ấy chợp mắt rồi dậy. Bạn tìm thấy 2 $1.'], [/^New guest: (.+)$/, 'Khách mới: $1'], [/^Level (\d+)! New things in the shops\.$/, 'Cấp $1! Cửa hàng có đồ mới.'],
+    [/^([\d.]+) h left$/, 'Còn $1 giờ'], [/^(\d+) min left$/, 'Còn $1 phút'], [/^([\d,]+) passes left$/, 'Còn $1 vòng quay'], [/^([\d,]+) passes left, waiting for the wheel$/, 'Còn $1 vòng quay, đang chờ bánh xe'], [/^(\d+) sleeping rounds left, resting until he stops$/, 'Còn $1 round ngủ, nghỉ tới khi cậu ấy dừng'], [/^(\d+) sleeping rounds left, about ([\d.]+) h$/, 'Còn $1 round ngủ, khoảng $2 giờ'],
+    [/^([\d,]+) portions on the counter, (\d+) seats, (\d+) lunchboxes$/, '$1 phần trên quầy, $2 ghế, $3 hộp cơm'], [/^(.+)'s floor is spotless\. Thank you!$/, 'Sàn nhà $1 sạch bong. Cảm ơn nhé!'], [/^(.+ cash) fell out\.$/, '$1 rơi ra.'], [/^Found (.+) in the leaves\.$/, 'Tìm thấy $1 trong đám lá.'], [/^Found (.+)\.$/, 'Tìm thấy $1.'], [/^(.+): you can taste (.+) in it\. A recipe clue!$/, '$1: bạn nếm ra có $2. Manh mối công thức!'], [/^(.+)\. Lovely\. \+2 Winks$/, '$1. Ngon quá. +2 Winks'], [/^(.+) welcomes you with 4 (.+)\.$/, '$1 chào đón bạn bằng 4 $2.'],
+    // Overlays
+    [/^([\d,]+) passes in (\d+) rounds?$/, '$1 vòng quay trong $2 round'], [/^New guests: (\d+)$/, 'Khách mới: $1'], [/^He slept ([\d.]+) hours and woke at round ([\d,]+)\.$/, 'Cậu ấy ngủ $1 giờ và thức dậy ở round $2.'], [/^Cook it (in the pot|on the stove|on the wok) for (\d+) Winks until his next long sleep\. Legendary guests only come for dream dishes\.$/, (m) => `Nấu ${{ 'in the pot': 'trong nồi', 'on the stove': 'trên bếp lò', 'on the wok': 'trên chảo' }[m[1]]} với giá ${m[2]} Winks, tới giấc ngủ dài tiếp theo. Khách huyền thoại chỉ đến vì Món Trong Mơ.`], [/^Also in the dream: (.+)$/, 'Trong giấc mơ còn có: $1'], [/^Sir Slowbite: (\d+) stars?$/, 'Ngài Nhai Chậm: $1 sao'], [/^He tasted: (.+)\.$/, 'Ông ấy đã nếm: $1.'], [/^He likes ([^.]+) and ([^.]+)\.$/, 'Ông ấy thích vị $1 và $2.'], [/^The dish he missed most was (.+)\.$/, 'Món ông ấy nhớ nhất là $1.'], [/^Reward: (.+)\.$/, 'Phần thưởng: $1.'], [/^They whisper that one of your unknown recipes uses (.+)\.$/, 'Họ thì thầm rằng một công thức bạn chưa biết có dùng $1.'], [/^New in your guest book: (.+)\.$/, 'Mới trong sổ khách: $1.'], [/^You got (\d+) (.+)\.$/, 'Bạn nhận được $1 $2.'], [/^The answer was: (.+)\.$/, 'Đáp án là: $1.'],
+    // Engine messages with names in them
+    [/^A neighbour sent you the recipe for (.+)\.$/, 'Một hàng xóm gửi bạn công thức $1.'], [/^Your restaurant reached level (\d+)\.$/, 'Nhà hàng của bạn đạt cấp $1.'], [/^He always asks whether the kitchen uses (.+)\.$/, 'Ông ấy luôn hỏi bếp có dùng $1 không.'], [/^He likes things (.+)\.$/, 'Ông ấy thích vị $1.'], [/^He also likes things (.+)\.$/, 'Ông ấy cũng thích vị $1.'], [/^Someone saw him sniff a dish made on the (.+)\.$/, 'Có người thấy ông ấy hít hà một món làm trên $1.'], [/^He once cried over a plate with (.+)\.$/, 'Ông ấy từng khóc trước một đĩa có $1.'], [/^The name of the dish he misses has (\d+) words?\.$/, 'Tên món ông ấy nhớ có $1 chữ.'], [/^He calls it (.+)\.\.\.$/, 'Ông ấy gọi nó là $1...'], [/^He went quiet at the (.+)\. Then he asked to see the chef\.$/, 'Ông ấy lặng đi trước món $1. Rồi xin gặp bếp trưởng.'], [/^He slept ([\d.]+) hours and dreamed of (.+)\.$/, 'Cậu ấy ngủ $1 giờ và mơ thấy $2.'], [/^He passed ([\d,]+) km on the wheel\. Festival: 25% more tips for a day, and bunting for your window\.$/, 'Cậu ấy đã chạy được $1 km trên bánh xe. Lễ hội: tip tăng 25% trong một ngày, thêm cờ dây treo cửa sổ.'], [/^You have met (\d+) kinds of guest\. A trophy is in your bag\.$/, 'Bạn đã gặp $1 loài khách. Có một chiếc cúp trong túi đồ.'], [/^(.+) agreed: you got (.+)\.$/, '$1 đồng ý: bạn nhận được $2.'],
+    [/^That dish is made on the (.+)\.$/, 'Món này phải làm trên $1.'], [/^A dream dish takes (\d+) Winks\.$/, 'Món Trong Mơ tốn $1 Winks.'], [/^You need more (.+)\.$/, 'Bạn cần thêm $1.'], [/^A try takes (\d+) Winks\.$/, 'Mỗi lần thử tốn $1 Winks.'], [/^You are out of (.+)\.$/, 'Bạn hết $1 rồi.'], [/^A hint takes (\d+) Winks\.$/, 'Mỗi gợi ý tốn $1 Winks.'], [/^You need (\d+) (.+) portions on the counter\.$/, 'Bạn cần $1 phần vị $2 trên quầy.'], [/^You need (\d+) (.+)\.$/, 'Bạn cần $1 $2.'], [/^(.+) already works here\.$/, '$1 đã làm ở đây rồi.'], [/^Level (\d+) allows (\d+) (sous chefs|waiters|cleaners)\.$/, 'Cấp $1 chỉ cho phép $2 $3.'], [/^Hiring costs ([\d,]+) cash\.$/, 'Thuê tốn $1 cash.'], [/^Reach level (\d+) first\.$/, 'Cần đạt cấp $1 trước.'], [/^A plate here costs ([\d,]+) cash\.$/, 'Một đĩa ở đây giá $1 cash.'], [/^(.+) is L(\d), (.+) is L(\d)\. Give L(\d) or better\.$/, '$1 là L$2, $3 là L$4. Hãy đưa L$5 trở lên.'],
+    // Dream names and signs on the canvas
+    [/^Golden (.+)$/, '$1 Vàng'], [/^TIPS (\d+)$/, 'TIP $1'], [/^(\d+) TURNS LEFT$/, 'CÒN $1 VÒNG'],
+    [/^\+([\d,]+) Winks$/, '+$1 Winks'], [/^\+([\d,]+) cash$/, '+$1 cash'], [/^(\d+) cm$/, '$1 cm'],
+    // Real numbers on details and buttons
+    [/^A batch makes ([\d,]+) portions, (\d+) cash each before tips$/, 'Mỗi mẻ $1 phần, mỗi phần $2 cash chưa tính tip'], [/^(.+) would cook it$/, '$1 sẽ nấu'], [/^([\d,]+) portions, (.+)$/, '$1 phần, $2'], [/^(\d+) cash today at the market, (\d+) left$/, 'Hôm nay $1 cash ở chợ, còn $2'], [/^Usually about (\d+) cash\.$/, 'Thường khoảng $1 cash.'], [/^Choose what the (.+) cooks next\.$/, 'Chọn món cho $1 nấu tiếp.'], [/^This room has space for (\d+) stations\.$/, 'Phòng này đủ chỗ cho $1 bếp.'], [/^Costs (.+ cash)\.$/, 'Giá $1.'], [/^You have (.+ cash)\.$/, 'Bạn có $1.'], [/^You have (\d+) Winks\.$/, 'Bạn có $1 Winks.'], [/^Only (\d+) left today\.$/, 'Hôm nay chỉ còn $1.'], [/^Hands over (\d+) portions from the counter\.$/, 'Giao $1 phần từ quầy.'], [/^You have ([\d,]+) of (\d+)\.$/, 'Bạn có $1/$2.'], [/^Costs (\d+) Winks and uses one of each\.$/, 'Tốn $1 Winks và dùng mỗi thứ một phần.'], [/^Every hamster's energy comes back ([\d.]+)% per round the real hamster sleeps\.$/, 'Sức của mọi hamster hồi $1% mỗi round hamster thật ngủ.'], [/^A batch takes ([\d.]+)% from a sous chef, a guest takes ([\d.]+)% from a waiter\.$/, 'Mỗi mẻ tốn $1% sức bếp phó, mỗi khách tốn $2% sức phục vụ.'], [/^Hire (.+) as a sous chef$/, 'Thuê $1 làm bếp phó'], [/^Hire (.+) as a waiter$/, 'Thuê $1 làm phục vụ'], [/^Hire (.+) as a cleaner$/, 'Thuê $1 làm tạp vụ'], [/^Give 1 (.+), get 1 (.+)\.$/, 'Đưa 1 $1, nhận 1 $2.'], [/^(\d) of 2 flavours match\.$/, 'Hợp $1/2 vị.'],
+    [/^Neighbours with it today: (.+)$/, 'Hàng xóm đang có: $1'], [/^Sells for (.+ cash)\.$/, 'Bán được $1.'], [/^Ingredients \(([\d,]+)\)$/, 'Nguyên liệu ($1)'], [/^Furniture \(([\d,]+)\)$/, 'Đồ đạc ($1)'], [/^Finds \(([\d,]+)\)$/, 'Đồ nhặt được ($1)'], [/^Sell ([\d,]+)$/, 'Bán $1'], [/^You get (.+ cash)\.$/, 'Bạn nhận $1.'], [/^Your stall is short of (.+)\. Trade for it: (.+)\.$/, 'Sạp của bạn thiếu $1. Đổi với: $2.'], [/^Your stall is short of (.+) today\.$/, 'Hôm nay sạp của bạn thiếu $1.'], [/^Grows (.+)\.$/, 'Trồng: $1.'], [/^They also bring (\d+) (.+) $/, 'Họ mang theo $1 $2 '], [/^They also brought (\d+) (.+)\.$/, 'Họ còn mang theo $1 $2.'], [/^Mailbox \((\d+)\)$/, 'Hòm thư ($1)'], [/^You are #(\d+) of (\d+)$/, 'Bạn hạng $1/$2'], [/^Level (\d+)$/, 'Cấp $1'], [/^House (\d+)$/, 'Nhà mức $1'], [/^Walk over to (.+)\.$/, 'Sang $1.'], [/^(\d+) of (\d+) spots$/, 'Đã dùng $1/$2 chỗ'], [/^([\d,]+) hanging$/, '$1 đang treo'], [/^You have ([\d,]+) more in your pantry\.$/, 'Trong kho còn $1.'], [/^([\d,]+) goes back to your pantry\.$/, '$1 về lại kho.'], [/^Offers for it are dropped\.$/, 'Các lời đề nghị cho món này bị hủy.'], [/^Wants your (.+) $/, 'Muốn $1 của bạn '], [/^Offers 1 (.+) $/, 'Đổi lấy 1 $1 '], [/^(\d+) waiting\. Click to read\.$/, '$1 thư đang chờ. Bấm để đọc.'], [/^A real find: (.+)! It is in your bag\.$/, 'Đồ xịn: $1! Đã vào túi đồ.'], [/^You picked up (.+)\. It is in your bag\.$/, 'Bạn nhặt được $1. Đã vào túi đồ.'], [/^(.+) said no this time\. Your (.+) came back\.$/, '$1 lần này từ chối. $2 của bạn đã quay về.'], [/^(.+) took your (.+) and left (.+)\.$/, '$1 lấy $2 của bạn và để lại $3.'], [/^You do not have (\d+) (.+)\.$/, 'Bạn không có đủ $1 $2.'],
+    [/^(.+) is cooking it$/, '$1 đang nấu'], [/^Cook (.+)$/, 'Nấu $1'], [/^Buy (\d+) (.+)$/, 'Mua $1 $2'], [/^Buy (.+)$/, 'Mua $1'],
+  ];
+  void STATE_WORD;
+
+  const misses = new Set();
+  const cache = new Map();
+  const VIET = /[À-ỹ]/;
+  function noteMiss(s) {
+    if (!/[A-Za-z]{2}/.test(s) || VIET.test(s) || known.has(s.trim())) return;
+    misses.add(s);
+  }
+  function translate(s) {
+    if (EXACT.has(s)) return EXACT.get(s);
+    for (const [re, to] of PATTERNS) {
+      const m = s.match(re);
+      if (!m) continue;
+      if (typeof to === 'function') return to(m);
+      return to.replace(/\$(\d)/g, (_, i) => tr(m[Number(i)] === undefined ? '' : m[Number(i)]));
+    }
+    if (s.includes(' · ')) return s.split(' · ').map(tr).join(' · ');
+    const sentences = s.split(/(?<=[.!?]) (?=[A-Z+0-9])/);
+    if (sentences.length > 1) return sentences.map(tr).join(' ');
+    const colon = s.indexOf(': ');
+    if (colon > 0) return tr(s.slice(0, colon)) + ': ' + tr(s.slice(colon + 2));
+    if (s.startsWith('Tap ') && EXACT.has('Click ' + s.slice(4))) return EXACT.get('Click ' + s.slice(4));
+    const inner = s.trim();
+    if (inner !== s && inner && EXACT.has(inner)) return s.replace(inner, EXACT.get(inner));
+    noteMiss(s);
+    return s;
+  }
+  function tr(input) {
+    if (input === '' || input === null || input === undefined) return input;
+    const s = String(input);
+    const hit = cache.get(s);
+    if (hit !== undefined) return hit;
+    const out = translate(s);
+    if (cache.size > 6000) cache.clear();
+    cache.set(s, out);
+    return out;
+  }
+  WW.tr = tr;
+  WW.I18N = { misses, known, EXACT, PATTERNS };
+
+  // Canvas signs: the small pixel font only has plain capitals, so accents are drawn on top of them in the two rows above.
+  const plainText = WW.tinyText;
+  const plainWidth = WW.tinyWidth;
+  const MARKS = {
+    '́': [[1, -1], [2, -2]],
+    '̀': [[1, -1], [0, -2]],
+    '̉': [[0, -2], [1, -2], [1, -1]],
+    '̃': [[0, -1], [1, -1], [1, -2], [2, -2]],
+    '̣': [[1, 5]],
+    '̂': [[0, -1], [1, -2], [2, -1]],
+    '̆': [[0, -2], [1, -1], [2, -2]],
+    '̛': [[3, 0]],
+  };
+  const HATS = '̂̆';
+  WW.tinyHead = 2;
+  WW.tinyText = function (ctx, text, x, y, color) {
+    const s = String(tr(text)).normalize('NFC').toUpperCase();
+    let cx = Math.round(x);
+    const yy = Math.round(y);
+    for (const ch of s) {
+      if (ch === ' ') {
+        cx += 3;
+        continue;
+      }
+      const parts = ch === 'Đ' ? 'D' : ch.normalize('NFD');
+      plainText(ctx, parts[0], cx, yy, color);
+      if (ch === 'Đ') ctx.fillRect(cx - 1, yy + 2, 1, 1);
+      const marks = parts.slice(1);
+      const hat = [...marks].some((m) => HATS.includes(m));
+      for (const m of marks) {
+        if (hat && !HATS.includes(m) && m !== '̣') ctx.fillRect(cx + 3, yy - 2, 1, 1);
+        else for (const [dx, dy] of MARKS[m] || []) ctx.fillRect(cx + dx, yy + dy, 1, 1);
+      }
+      cx += 4;
+    }
+    return cx - x;
+  };
+  WW.tinyWidth = (text) => plainWidth(String(tr(text)).normalize('NFC'));
+
+  // The few words written straight into the page.
+  if (globalThis.document) {
+    const set = (id, text) => {
+      const n = document.getElementById(id);
+      if (n) n.textContent = text;
+    };
+    set('lineserve', 'Phục vụ (phím cách)');
+    set('linequit', 'Rời bàn');
+    set('zoomFit', 'Tất cả');
+    set('ribbonState', 'GIỜ YÊN TĨNH');
+  }
+})((globalThis.WW = globalThis.WW || {}));

@@ -1,0 +1,211 @@
+// Every guest in the book. needs: what must be true in your restaurant before this guest will come in.
+(function (WW) {
+  const C = WW.C;
+  const list = [];
+  // id, name, rarity, favourite flavour, needs, art spec, one line for the guest book
+  const g = (id, n, rar, likes, needs, spec, note) => list.push(Object.assign({ id, n, rar, likes, needs: needs || {}, note }, spec));
+
+  // Common: walk in from day one
+  g('field_mouse', 'Field Mouse', 'c', 'nutty', 0, { a: 'ball', r: 5, c: '#b89a7a', b: '#efe1cf', ear: 'big', tail: 'thin' }, 'Eats one crumb, then asks for the bill.');
+  g('house_mouse', 'House Mouse', 'c', 'savory', 0, { a: 'ball', r: 5, c: '#a9a4a0', b: '#e6e2dc', ear: 'big', tail: 'thin' }, 'Knows every shortcut behind the skirting board.');
+  g('harvest_mouse', 'Harvest Mouse', 'c', 'nutty', 0, { a: 'ball', r: 4, c: '#d98d4a', b: '#fff1d6', ear: 'round', tail: 'thin' }, 'Small enough to sit on a pea.');
+  g('bank_vole', 'Bank Vole', 'c', 'fresh', 0, { a: 'ball', r: 5, c: '#9c6a45', b: '#d9c0a0', ear: 'tiny', tail: 'stub' }, 'Prefers a table near the exit.');
+  g('shrew', 'Pygmy Shrew', 'c', 'savory', 0, { a: 'ball', r: 4, c: '#7d6a62', b: '#c9b8aa', ear: 'tiny', tail: 'thin', whisk: 1 }, 'Eats every two hours or gets very upset.');
+  g('gerbil', 'Gerbil', 'c', 'nutty', 0, { a: 'ball', r: 5, c: '#d8b27a', b: '#fff1d6', ear: 'round', tail: 'tuft', c3: '#8a5a3c' }, 'Digs a little tunnel under the tablecloth.');
+  g('dwarf_hamster', 'Dwarf Hamster', 'c', 'nutty', 0, { a: 'ball', r: 5, c: '#c9c6c2', b: '#ffffff', c2: '#6d6a70', mark: 'stripe', ear: 'round' }, 'Pockets half the meal for later.');
+  g('guinea_pig', 'Guinea Pig', 'c', 'fresh', 0, { a: 'ball', r: 6, c: '#fff1d6', c2: '#b0663a', mark: 'patch', ear: 'tiny' }, 'Wheeks loudly when the salad arrives.');
+  g('fancy_rat', 'Fancy Rat', 'c', 'savory', 0, { a: 'ball', r: 6, c: '#e3ddd3', c2: '#7c6a62', mark: 'saddle', ear: 'big', tail: 'thin' }, 'Reads the whole menu, twice.');
+  g('sparrow', 'Sparrow', 'c', 'nutty', 0, { a: 'bird', c: '#a67c52', b: '#e8d9bd', c2: '#6d4535', cap: '#7d5a3c', beakc: C.ink }, 'Brings six friends and one crumb budget.');
+  g('robin', 'Robin', 'c', 'savory', 0, { a: 'bird', c: '#8e7558', b: '#e4572e', c2: '#6d5a42', beakc: C.ink }, 'Insists on the window seat.');
+  g('chick', 'Chick', 'c', 'nutty', 0, { a: 'bird', c: '#ffd75e', b: '#fff1b0', c2: '#f2b53a' }, 'Fell asleep in the soup. Twice.');
+  g('duckling', 'Duckling', 'c', 'fresh', 0, { a: 'bird', c: '#ffe27a', b: '#fff1b0', c2: '#f2c53a', beak: 'flat', beakc: '#f28a2e' }, 'Follows the first waiter it sees.');
+  g('pigeon', 'Pigeon', 'c', 'nutty', 0, { a: 'bird', c: '#9aa7b0', b: '#c8d0d6', c2: '#5e6a78', cap: '#5a7a78' }, 'Will find its way back, every single day.');
+  g('goldfinch', 'Goldfinch', 'c', 'nutty', 0, { a: 'bird', c: '#ffcf3f', b: '#fff1b0', c2: '#2b2b33', cap: '#2b2b33', mask: '#d93b2b' }, 'Sings between courses.');
+  g('wren', 'Wren', 'c', 'savory', 0, { a: 'bird', c: '#8a5a3c', b: '#d9b48a', c2: '#6d4535', beakc: C.ink }, 'Tiny bird, enormous opinions.');
+  g('red_ant', 'Red Ant', 'c', 'sweet', 0, { a: 'ant', c: '#b53a2b', c2: '#d44a33' }, 'Carries the plate home instead.');
+  g('black_ant', 'Black Ant', 'c', 'sweet', 0, { a: 'ant', c: '#3d3440', c2: '#4d4450' }, 'Arrives in a very orderly queue.');
+  g('ladybug', 'Ladybug', 'c', 'fresh', 0, { a: 'bug', c: '#e4372e', c2: '#2b2b33', mark: 'spots' }, 'Counts her spots before ordering.');
+  g('pillbug', 'Pill Bug', 'c', 'earthy', 0, { a: 'shell', kind: 'pill', c: '#7f8a94', body: '#5e6a78', bands: '#5e6a78' }, 'Rolls up when the bill comes.');
+  g('dung_beetle', 'Dung Beetle', 'c', 'earthy', 0, { a: 'bug', c: '#2f5f66', line: '#173a44' }, 'Brought his own ball. Please do not ask.');
+  g('earthworm', 'Earthworm', 'c', 'earthy', 0, { a: 'worm', c: '#e39a9a', c2: '#d98a8a' }, 'Cannot read the menu. Orders by smell.');
+  g('caterpillar', 'Caterpillar', 'c', 'fresh', 0, { a: 'worm', c: '#7cc36a', c2: '#a8e0b8', ant: 1, seg: 2 }, 'Very hungry. You know the type.');
+  g('garden_snail', 'Garden Snail', 'c', 'fresh', 0, { a: 'shell', kind: 'snail', c: '#c98f5a', c2: '#6d4535', body: '#d9c0a0' }, 'Booked this table last Tuesday.');
+  g('slug', 'Slug', 'c', 'fresh', 0, { a: 'worm', c: '#c9a23f', c2: '#b8922f', stalks: 1, segs: 6 }, 'Leaves a glowing review on the floor.');
+  g('cricket', 'Cricket', 'c', 'nutty', 0, { a: 'insect', c: '#7a5a3c', wing: '#5a4030' }, 'Plays for tips.');
+  g('grasshopper', 'Grasshopper', 'c', 'fresh', 0, { a: 'insect', c: '#7cc36a', wing: '#a8e0b8' }, 'Finished before you turned around.');
+  g('tree_frog', 'Tree Frog', 'c', 'savory', 0, { a: 'frog', c: '#6cc36a', b: '#e8f5c8' }, 'Sticks to the wall while waiting.');
+  g('toad', 'Common Toad', 'c', 'savory', 0, { a: 'frog', c: '#9a7a50', b: '#e0cda6', c2: '#6d4f30', mark: 'dapple' }, 'Has never once been in a hurry.');
+  g('newt', 'Spotted Newt', 'c', 'fresh', 0, { a: 'long', c: '#f28a2e', c2: '#b53a2b', mark: 'spots', tail: 'lizard', nose: C.ink }, 'Regrows his appetite.');
+  g('gecko', 'Gecko', 'c', 'sweet', 0, { a: 'long', c: '#8fc7a0', c2: '#3f7f5a', mark: 'spots', tail: 'lizard' }, 'Licks his own eye after dessert.');
+  g('rabbit_kit', 'Rabbit Kit', 'c', 'fresh', 0, { a: 'quad', c: '#d9c0a0', b: '#fff1d6', ear: 'tall', tail: 'stub', hr: 5, nose: C.rose }, 'Orders carrots, gets carrots, is delighted.');
+  g('chipmunk', 'Chipmunk', 'c', 'nutty', 0, { a: 'up', c: '#c98f5a', b: '#fff1d6', c2: '#5a3a2a', mark: 'stripes', ear: 'round', tail: 'bushy' }, 'Cheeks full. Still ordering.');
+  g('squirrel', 'Red Squirrel', 'c', 'nutty', 0, { a: 'up', c: '#c9662e', b: '#fff1d6', ear: 'point', tail: 'big' }, 'Hides the tip somewhere and forgets.');
+  g('hedgehog', 'Hoglet', 'c', 'savory', 0, { a: 'ball', r: 6, c: '#9a7a5c', c2: '#5a4032', b: '#f0d6a3', spiky: 1, ear: 'tiny' }, 'Please do not pat the guests.');
+  g('mole', 'Mole', 'c', 'earthy', 0, { a: 'ball', r: 6, c: '#4a4250', b: '#6d6474', ear: 'none', nose: C.rose, cheek: '#6d6474' }, 'Rates the food by feel.');
+  g('lemming', 'Lemming', 'c', 'fresh', 0, { a: 'ball', r: 5, c: '#c98f5a', c2: '#3d3440', mark: 'saddle', ear: 'tiny' }, 'Goes where everyone else is going.');
+  g('kitten', 'Tabby Kitten', 'c', 'savory', 0, { a: 'quad', c: '#d9a860', c2: '#a06a30', mark: 'stripes', ear: 'point', tail: 'long', b: '#fff1d6', nose: C.rose }, 'Knocks one spoon off every table.');
+  g('puppy', 'Puppy', 'c', 'savory', 0, { a: 'quad', c: '#c98f5a', ear: 'droop', tail: 'short', b: '#fff1d6', earc: '#8a5a3c' }, 'Loves this restaurant more than anything ever.');
+  g('piglet', 'Piglet', 'c', 'sweet', 0, { a: 'quad', c: '#f7b6b0', ear: 'point', tail: 'curl', snout: 'pig', nosec: '#f49fb0', inner: '#e88a94' }, 'Licks the plate clean, then yours.');
+  g('lamb', 'Lamb', 'c', 'fresh', 0, { a: 'quad', c: '#4a4250', wool: '#fff8e8', ear: 'tiny', tail: 'stub', legc: '#4a4250', b: '#6d6474', nocheek: 1 }, 'Says the same thing about every dish.');
+  g('calf', 'Calf', 'c', 'fresh', 0, { a: 'quad', c: '#fff1d6', c2: '#4a4250', mark: 'patch', ear: 'round', earc: '#4a4250', tail: 'tuft', snout: 'wide', b: '#f7c4c0' }, 'Chews each bite forty times.');
+  g('gosling', 'Gosling', 'c', 'fresh', 0, { a: 'bird', c: '#c9c26a', b: '#efe9a0', c2: '#9a944a', beak: 'flat', beakc: C.ink }, 'Honks at the soup. It deserved it.');
+  g('bumblebee', 'Bumblebee', 'c', 'sweet', 0, { a: 'flyer', kind: 'bee', c: '#ffc83d' }, 'Should not be able to fly. Tips well anyway.');
+  g('housefly', 'Housefly', 'c', 'sweet', 0, { a: 'flyer', kind: 'fly', c: '#4a4250', c2: '#b53a2b' }, 'Technically a health problem. Paid in full.');
+  g('mayfly', 'Mayfly', 'c', 'fresh', 0, { a: 'flyer', kind: 'dragonfly', c: '#e8d9a0', c2: '#6d4535', wing: '#fff8e8' }, 'Has one day. Spent it here.');
+  g('tadpole', 'Tadpole', 'c', 'fresh', 0, { a: 'bowl', kind: 'fish', c: '#4a4250', c2: '#6d6474' }, 'Will be back with legs.');
+
+  // Uncommon: a little reputation, or a dish they like
+  g('fox_kit', 'Fox Kit', 'u', 'savory', { lvl: 2 }, { a: 'quad', c: '#e0772e', b: '#fff1d6', ear: 'point', earc: '#c9662e', tail: 'big', c3: '#fff8e8', snout: 'long', legc: '#5a3a2a' }, 'Claims the chicken was his idea.');
+  g('wolf_pup', 'Wolf Pup', 'u', 'savory', { lvl: 3 }, { a: 'quad', c: '#8f949e', b: '#dfe2e6', ear: 'point', tail: 'bushy', snout: 'long' }, 'Howls when his plate is taken away.');
+  g('raccoon', 'Raccoon Kit', 'u', 'sweet', { lvl: 3 }, { a: 'quad', c: '#9a9aa0', c2: '#3d3440', facemark: 'mask', ear: 'round', tail: 'ring', c3: '#3d3440', b: '#e6e2dc', hr: 5 }, 'Washes every bite. Wears a mask to dinner.');
+  g('skunk', 'Skunk Kit', 'u', 'earthy', { lvl: 2 }, { a: 'quad', c: '#3d3440', c2: '#fff8e8', mark: 'stripe', facemark: 'stripe', ear: 'round', tail: 'big', c3: '#fff8e8', b: '#6d6474' }, 'Very polite. Everyone is very polite back.');
+  g('ferret', 'Ferret', 'u', 'savory', { lvl: 2 }, { a: 'long', c: '#d9b48a', c2: '#6d4535', ear: 'round', tail: 'taper', tailc: '#6d4535', nose: C.rose }, 'Stole a spoon. Returned a different spoon.');
+  g('weasel', 'Least Weasel', 'u', 'savory', { lvl: 3 }, { a: 'long', c: '#a0683a', b: '#fff8e8', ear: 'tiny', tail: 'short' }, 'Gone before the plate lands.');
+  g('stoat', 'Stoat', 'u', 'savory', { lvl: 4 }, { a: 'long', c: '#fff8e8', b: '#fff1d6', ear: 'tiny', tail: 'taper', tailc: '#3d3440' }, 'Changes coat with the season, keeps the same order.');
+  g('otter', 'Otter Pup', 'u', 'savory', { decor: 'pond' }, { a: 'long', c: '#7a553a', b: '#d9c0a0', ear: 'tiny', tail: 'taper', hr: 4 }, 'Cracks the walnut bowl on his own tummy.');
+  g('badger', 'Badger Cub', 'u', 'earthy', { lvl: 4 }, { a: 'quad', c: '#8f8f96', c2: '#3d3440', facemark: 'stripe', ear: 'tiny', tail: 'stub', legc: '#3d3440', b: '#fff8e8' }, 'Will not move until the stew is hot.');
+  g('beaver', 'Beaver Kit', 'u', 'earthy', { decor: 'pond' }, { a: 'ball', r: 6, c: '#8a5a3c', b: '#c98f5a', ear: 'tiny', tail: 'flat', c3: '#4a3028' }, 'Keeps rearranging your tables.');
+  g('marmot', 'Marmot', 'u', 'fresh', { lvl: 3 }, { a: 'up', c: '#9c7a55', b: '#d9c0a0', ear: 'tiny', tail: 'stub', hr: 5, hy: 9 }, 'Whistles when the waiter is coming.');
+  g('prairie_dog', 'Prairie Dog', 'u', 'fresh', { decor: 'sand' }, { a: 'up', c: '#c9a06a', b: '#f0d6a3', ear: 'tiny', tail: 'short' }, 'Stands up to check on the neighbours.');
+  g('meerkat', 'Meerkat', 'u', 'savory', { decor: 'sand' }, { a: 'up', c: '#c9ad85', b: '#efe1cf', c2: '#5a4032', facemark: 'mask', ear: 'tiny', tail: 'long', hr: 3, hy: 8 }, 'One always stays on lookout during dinner.');
+  g('chinchilla', 'Chinchilla', 'u', 'nutty', { decor: 'sand' }, { a: 'ball', r: 6, c: '#b8bcc4', b: '#fff8e8', ear: 'big', tail: 'bushy' }, 'Needs a dust bath before dessert.');
+  g('degu', 'Degu', 'u', 'fresh', { lvl: 3 }, { a: 'ball', r: 5, c: '#8a6a4a', b: '#c9ad85', ear: 'round', tail: 'tuft', c3: '#3d3440' }, 'Talks through the whole meal.');
+  g('jerboa', 'Jerboa', 'u', 'nutty', { decor: 'sand' }, { a: 'up', c: '#e0c08a', b: '#fff1d6', ear: 'huge', tail: 'tuft', c3: '#fff8e8', bigfoot: 1, hr: 4 }, 'Hops. Only hops. Mind the soup.');
+  g('pika', 'Pika', 'u', 'fresh', { lvl: 2 }, { a: 'ball', r: 5, c: '#b8a58a', b: '#efe1cf', ear: 'big', tail: 'none' }, 'Dries flowers for winter on your windowsill.');
+  g('hare', 'Leveret', 'u', 'fresh', { lvl: 3 }, { a: 'quad', c: '#a8855a', b: '#efe1cf', ear: 'tall', tail: 'stub', legc: '#8a6a4a' }, 'Late for something. Eats fast.');
+  g('kingfisher', 'Kingfisher', 'u', 'savory', { decor: 'perch' }, { a: 'bird', c: '#2a8fc0', b: '#f28a2e', c2: '#1f6f9a', beak: 'needle', beakc: C.ink }, 'Dives at the soup from the ceiling.');
+  g('woodpecker', 'Woodpecker', 'u', 'savory', { decor: 'perch' }, { a: 'bird', c: '#3d3440', b: '#fff1d6', c2: '#fff8e8', cap: '#e4372e', beak: 'needle', beakc: C.ink }, 'Taps the table to call the waiter.');
+  g('budgie', 'Budgie', 'u', 'nutty', { decor: 'perch' }, { a: 'bird', c: '#7fd06a', b: '#ffe27a', c2: '#3f7f5a', beakc: '#f7c4c0', longtail: 1 }, 'Repeats the specials to everyone.');
+  g('canary', 'Canary', 'u', 'sweet', { decor: 'perch' }, { a: 'bird', c: '#ffdd4a', b: '#fff1b0', c2: '#e8b82f', beakc: '#f7c4c0' }, 'Will sing for an extra blueberry.');
+  g('cockatiel', 'Cockatiel', 'u', 'nutty', { decor: 'perch' }, { a: 'bird', c: '#d9d6cc', b: '#efece4', c2: '#8f8f96', crest: '#ffdd4a', beakc: '#8a8a90', longtail: 1 }, 'Whistles the same four notes all evening.');
+  g('lovebird', 'Lovebird', 'u', 'sweet', { decor: 'perch' }, { a: 'bird', c: '#58c07a', b: '#ff8a5a', c2: '#3f7f5a', mask: '#ff8a5a', beakc: '#f7c4c0', beak: 'hook' }, 'Always asks for a table for two.');
+  g('quail', 'Quail Chick', 'u', 'nutty', { lvl: 2 }, { a: 'bird', c: '#a67c52', b: '#efe1cf', c2: '#6d4535', crest: '#3d3440', beakc: C.ink }, 'Runs everywhere in a straight line.');
+  g('blue_tit', 'Blue Tit', 'u', 'nutty', { decor: 'perch' }, { a: 'bird', c: '#7fbf6a', b: '#ffe27a', c2: '#4a8fd0', cap: '#4a8fd0', mask: '#fff8e8', beakc: C.ink }, 'Hangs upside down to reach the menu.');
+  g('monarch', 'Monarch Butterfly', 'u', 'sweet', { decor: 'honey' }, { a: 'flyer', kind: 'butterfly', c: '#3d3440', wing: '#f28a2e', c2: '#ffb45a', c3: '#3d3440' }, 'Came a very long way for this.');
+  g('blue_butterfly', 'Blue Morpho', 'u', 'sweet', { decor: 'honey' }, { a: 'flyer', kind: 'butterfly', c: '#3d3440', wing: '#3f8fe0', c2: '#2a6fc0', c3: '#d5f0f2' }, 'Tastes with her feet. Wipe the table.');
+  g('dragonfly', 'Dragonfly', 'u', 'savory', { decor: 'pond' }, { a: 'flyer', kind: 'dragonfly', c: '#2f9f9a', c2: '#2a6f9a' }, 'Hovers. Refuses to sit.');
+  g('stag_beetle', 'Stag Beetle', 'u', 'sweet', { decor: 'moss' }, { a: 'bug', c: '#5a3430', mandible: '#3d2020', head: '#3d2020' }, 'Opens walnuts for the table.');
+  g('rhino_beetle', 'Rhino Beetle', 'u', 'sweet', { decor: 'moss' }, { a: 'bug', c: '#4a3a2a', horn: '#2b2030', head: '#2b2030' }, 'Can lift this table. Has lifted this table.');
+  g('click_beetle', 'Click Beetle', 'u', 'earthy', { decor: 'moss' }, { a: 'bug', c: '#7a6a4a', line: '#4a3a2a' }, 'Clicks loudly when pleased.');
+  g('weevil', 'Weevil', 'u', 'nutty', { flavor: 'nutty' }, { a: 'bug', c: '#3f8f6a', c2: '#2f6f5a', mark: 'bands', head: '#2f6f5a' }, 'Has eaten in every oat tin in town.');
+  g('tortoise', 'Hatchling Tortoise', 'u', 'fresh', { lvl: 4 }, { a: 'shell', kind: 'turtle', c: '#7f7a4a', c2: '#4f5a2a', mark: 'dapple', body: '#b8a56a' }, 'Started walking here yesterday.');
+  g('turtle', 'Painted Turtle', 'u', 'fresh', { decor: 'pond' }, { a: 'shell', kind: 'turtle', c: '#3f6f4a', c2: '#e4372e', mark: 'dapple', body: '#7cc36a' }, 'Shell polished for the occasion.');
+  g('hermit', 'Hermit Crab', 'u', 'savory', { decor: 'pond' }, { a: 'shell', kind: 'crab', c: '#d9b48a', c2: '#8a5a3c', body: '#e4772e' }, 'Is looking for a bigger table. And house.');
+  g('crab', 'Pea Crab', 'u', 'savory', { decor: 'pond' }, { a: 'crab', c: '#e4572e', b: '#fff1d6' }, 'Walks sideways to the washroom.');
+  g('skink', 'Blue Tongue Skink', 'u', 'sweet', { decor: 'sunlamp' }, { a: 'long', c: '#a89a7a', c2: '#6d5a42', mark: 'bands', tail: 'lizard', nose: '#3f8fe0' }, 'Sticks out a blue tongue when asked about dessert.');
+  g('anole', 'Green Anole', 'u', 'sweet', { decor: 'sunlamp' }, { a: 'long', c: '#7cd06a', tail: 'lizard', bumpEye: 1 }, 'Does push ups at the other guests.');
+  g('goldfish', 'Goldfish', 'u', 'fresh', { decor: 'pond' }, { a: 'bowl', kind: 'fish', c: '#f28a2e', c2: '#ffb45a' }, 'Forgot he ordered. Delighted when it comes.');
+  g('betta', 'Betta', 'u', 'savory', { decor: 'pond' }, { a: 'bowl', kind: 'fish', c: '#c0304a', c2: '#3f6fe0', water: '#bfe6f0' }, 'Please do not seat him near a mirror.');
+  g('goat_kid', 'Goat Kid', 'u', 'fresh', { decor: 'hay' }, { a: 'quad', c: '#fff1d6', ear: 'point', horn: 'stub', tail: 'short', snout: 'wide', b: '#efe1cf' }, 'Tried to eat the menu first.');
+  g('donkey', 'Donkey Foal', 'u', 'fresh', { decor: 'hay' }, { a: 'quad', c: '#8f8a84', b: '#efe1cf', ear: 'tall', tail: 'tuft', snout: 'wide', neck: 1 }, 'Stubborn about the table by the door.');
+  g('pony', 'Shetland Foal', 'u', 'sweet', { decor: 'hay' }, { a: 'quad', c: '#a0683a', mane: '#4a3028', ear: 'point', tail: 'tuft', c3: '#4a3028', snout: 'wide', neck: 2, b: '#d9b48a' }, 'Stands the entire meal.');
+  g('duck', 'Mandarin Duckling', 'u', 'fresh', { decor: 'pond' }, { a: 'bird', c: '#d9a060', b: '#fff1d6', c2: '#3f6f8a', cap: '#3f7f5a', beak: 'flat', beakc: '#e4372e' }, 'Overdressed and aware of it.');
+  g('capybara', 'Capybara Pup', 'u', 'fresh', { lvl: 5, decor: 'pond' }, { a: 'quad', c: '#a8784a', ear: 'tiny', tail: 'none', snout: 'wide', b: '#8a5a3c', nocheek: 1 }, 'Everyone sits next to him. Nobody knows why.');
+
+  // Rare: need the right decor, or a dish that smells right
+  g('red_panda', 'Red Panda Cub', 'r', 'sweet', { lvl: 6 }, { a: 'quad', c: '#c9562a', c2: '#fff8e8', facemark: 'patch', ear: 'round', earc: '#fff8e8', tail: 'ring', c3: '#7a3018', legc: '#3d2020', b: '#fff8e8' }, 'Stands up with both arms high when startled.');
+  g('panda', 'Panda Cub', 'r', 'fresh', { decor: 'bamboo' }, { a: 'quad', c: '#fff8e8', c2: '#2b2b33', facemark: 'patch', ear: 'round', earc: '#2b2b33', tail: 'stub', legc: '#2b2b33', nose: C.ink, b: '#fff8e8' }, 'Orders greens. Eats for fourteen hours.');
+  g('koala', 'Koala Joey', 'r', 'fresh', { decor: 'bamboo' }, { a: 'up', c: '#9a9aa4', b: '#e6e2dc', ear: 'big', inner: '#fff8e8', hr: 5, hy: 9, face: '#9a9aa4', nose: C.ink }, 'Asleep before the menu arrives.');
+  g('sloth', 'Sloth Baby', 'r', 'fresh', { decor: 'bamboo', lvl: 6 }, { a: 'up', c: '#a8956e', b: '#d9c9a0', c2: '#5a4032', facemark: 'mask', ear: 'none', hr: 5, hy: 9 }, 'Left a tip last week. It arrives tomorrow.');
+  g('lemur', 'Mouse Lemur', 'r', 'sweet', { lvl: 7 }, { a: 'up', c: '#a89888', b: '#efe1cf', ear: 'round', tail: 'long', bigeye: 1 }, 'Those eyes have seen every dessert.');
+  g('marmoset', 'Pygmy Marmoset', 'r', 'sweet', { lvl: 7 }, { a: 'up', c: '#a88a5a', b: '#d9c0a0', ear: 'tiny', tail: 'long', face: '#efe1cf', bigeye: 1 }, 'Holds the spoon with both hands.');
+  g('tarsier', 'Tarsier', 'r', 'savory', {}, { a: 'up', c: '#b89a7a', b: '#d9c0a0', ear: 'big', tail: 'tuft', bigeye: 1, hr: 5 }, 'Each eye is bigger than his stomach.');
+  g('loris', 'Slow Loris', 'r', 'sweet', {}, { a: 'up', c: '#c9ad85', b: '#efe1cf', c2: '#5a3a2a', facemark: 'mask', ear: 'tiny', bigeye: 1 }, 'Comes in slowly. Orders slowly. Lovely.');
+  g('armadillo', 'Pink Fairy Armadillo', 'r', 'earthy', { decor: 'sand' }, { a: 'shell', kind: 'turtle', c: '#f49fb0', bands: '#d97a8a', body: '#fff1d6', ear: 1, snoutlong: 1 }, 'Smallest suit of armour in town.');
+  g('pangolin', 'Pangolin Pup', 'r', 'earthy', { decor: 'moss', lvl: 6 }, { a: 'long', c: '#a07a4a', c2: '#6d4f30', mark: 'scale', tail: 'lizard', ear: 'none', snout: 'long', mc: '#d9b48a' }, 'Politely rolls up if you stare.');
+  g('anteater', 'Silky Anteater', 'r', 'sweet', { flavor: 'sweet', lvl: 6 }, { a: 'quad', c: '#d9a860', ear: 'tiny', tail: 'long', snout: 'thin', b: '#efe1cf', hr: 4 }, 'Eyes the black ants across the room.');
+  g('numbat', 'Numbat', 'r', 'sweet', { flavor: 'sweet', lvl: 7 }, { a: 'quad', c: '#b0663a', c2: '#fff8e8', mark: 'stripes', ear: 'point', tail: 'big', c3: '#d9c0a0', snout: 'long', hr: 4 }, 'Licks ten thousand crumbs a day.');
+  g('quokka', 'Quokka', 'r', 'fresh', { lvl: 8 }, { a: 'up', c: '#a88a68', b: '#d9c0a0', ear: 'round', tail: 'taper', hr: 5, hy: 9, nose: C.ink }, 'Smiles at the bill.');
+  g('wallaby', 'Wallaby Joey', 'r', 'fresh', { lvl: 8 }, { a: 'up', c: '#a89a8a', b: '#efe1cf', ear: 'tall', tail: 'long', bigfoot: 1 }, 'Brought leftovers home in the pouch.');
+  g('sugar_glider', 'Sugar Glider', 'r', 'sweet', { decor: 'honey' }, { a: 'flyer', kind: 'bat', c: '#b8bcc4', c2: '#8f8f96' }, 'Lands on your soup from the top shelf.');
+  g('bat', 'Bumblebee Bat', 'r', 'sweet', {}, { a: 'flyer', kind: 'bat', c: '#7a5a4a', c2: '#4a3028' }, 'Smallest mammal in the book. Hangs up his own coat.');
+  g('moth', 'Rosy Maple Moth', 'r', 'sweet', {}, { a: 'flyer', kind: 'butterfly', c: '#ffe27a', wing: '#f49fb0', c2: '#ffe27a', c3: '#e88aa0' }, 'Only here for the lanterns.');
+  g('firefly', 'Firefly', 'r', 'sweet', {}, { a: 'bug', c: '#4a3a2a', glow: '#ffec70', head: '#e4572e' }, 'Saves you a candle.');
+  g('owlet', 'Elf Owlet', 'r', 'savory', { decor: 'perch' }, { a: 'bird', c: '#a67c52', b: '#e8d9bd', c2: '#6d4535', owl: 1, tufts: 1 }, 'Turns her head to read the menu behind her.');
+  g('dormouse', 'Hazel Dormouse', 'r', 'nutty', { decor: 'burrow' }, { a: 'ball', r: 6, c: '#d9a03a', b: '#fff1d6', ear: 'round', tail: 'bushy' }, 'Sleeps seven months, then wants breakfast.');
+  g('kiwi', 'Kiwi Chick', 'r', 'earthy', { decor: 'moss' }, { a: 'ball', r: 6, c: '#8a6a4a', c2: '#6d4f30', mark: 'dapple', ear: 'none', nose: '#d9c0a0', cheek: '#6d4f30' }, 'Cannot fly. Has no plans to.');
+  g('puffin', 'Puffling', 'r', 'savory', { decor: 'pond', lvl: 6 }, { a: 'bird', c: '#3d3440', b: '#fff8e8', c2: '#2b2b33', beak: 'big', beakc: '#f28a2e', legc: '#f28a2e' }, 'Holds twelve peas in that beak.');
+  g('penguin', 'Penguin Chick', 'r', 'savory', { decor: 'pond', lvl: 7 }, { a: 'up', c: '#4a4a5a', b: '#fff8e8', ear: 'none', beak: '#3d3440', hr: 5, hy: 9, feet: '#f2a33a' }, 'Dressed for the wrong restaurant, but happy.');
+  g('toucan', 'Toucanet', 'r', 'sweet', { flavor: 'sweet', decor: 'perch' }, { a: 'bird', c: '#2b2b33', b: '#fff1b0', c2: '#2b2b33', beak: 'big', beakc: '#f2a33a', c3: '#e4372e', legc: '#3f6f8a' }, 'Tosses every berry in the air first.');
+  g('parrot', 'Parrotlet', 'r', 'sweet', { decor: 'perch', lvl: 7 }, { a: 'bird', c: '#3fbf6a', b: '#a8e06a', c2: '#2a6fc0', beak: 'hook', beakc: '#f7c4c0', longtail: 1 }, 'Told the critic what you said about him.');
+  g('flamingo', 'Flamingo Chick', 'r', 'tangy', { decor: 'pond', lvl: 8 }, { a: 'bird', c: '#ff9ab0', b: '#ffc4cf', c2: '#e86a8a', beak: 'hook', beakc: C.ink, leg: 3, legc: '#e86a8a' }, 'Stands on one leg. Eats with the other.');
+  g('peacock', 'Peachick', 'r', 'sweet', { decor: 'perch', lvl: 8 }, { a: 'bird', c: '#2a6fc0', b: '#2a8fc0', c2: '#3f7f5a', fan: '#3f9f6a', c3: '#ffdd4a', crest: '#2a6fc0', leg: 1 }, 'Takes up three seats.');
+  g('rooster', 'Bantam Rooster', 'r', 'nutty', { decor: 'hay', lvl: 6 }, { a: 'bird', c: '#e0772e', b: '#c9562a', c2: '#3f6f4a', comb: 1, wattle: 1, longtail: 1 }, 'Announces the wheel is running. Every time.');
+  g('poison_frog', 'Blue Dart Frog', 'r', 'tangy', { flavor: 'tangy', decor: 'pond' }, { a: 'frog', c: '#2f6fe0', b: '#6fa8f0', c2: '#14306f', mark: 'spots' }, 'Harmless if you do not lick him. Please.');
+  g('red_frog', 'Red Eyed Frog', 'r', 'tangy', { flavor: 'tangy', decor: 'pond' }, { a: 'frog', c: '#5fc36a', b: '#fff1d6', eyec: '#e4372e' }, 'Stares at you when the soup is late.');
+  g('axolotl', 'Axolotl', 'r', 'savory', { decor: 'pond', lvl: 7 }, { a: 'long', c: '#f7b6c8', b: '#ffd8e0', tail: 'lizard', gills: '#e4577a', hr: 4 }, 'Never quite grew up. Smiling about it.');
+  g('chameleon', 'Pocket Chameleon', 'r', 'tangy', { decor: 'sunlamp', lvl: 6 }, { a: 'long', c: '#58c07a', c2: '#ffdd4a', mark: 'bands', tail: 'curl', bumpEye: 1, spines: '#3f9f6a' }, 'Matches the wallpaper. You will not find him to bring the bill.');
+  g('iguana', 'Iguana Hatchling', 'r', 'fresh', { decor: 'sunlamp', lvl: 7 }, { a: 'long', c: '#6fae5a', c2: '#3f7f5a', mark: 'bands', tail: 'lizard', spines: '#3f7f5a' }, 'Salad only. Salad, always.');
+  g('baby_croc', 'Baby Caiman', 'r', 'savory', { decor: 'pond', lvl: 8 }, { a: 'long', c: '#5f8a4a', c2: '#3f5f2a', mark: 'scale', tail: 'lizard', snout: 'long', spines: '#3f5f2a', bumpEye: 1 }, 'Nobody has asked him to wait.');
+  g('clownfish', 'Clownfish', 'r', 'savory', { decor: 'pond', lvl: 5 }, { a: 'bowl', kind: 'fish', c: '#f28a2e', c2: '#f28a2e', mark: 'bands' }, 'Everyone asks. He is not lost.');
+  g('seahorse', 'Pygmy Seahorse', 'r', 'fresh', { decor: 'pond', lvl: 6 }, { a: 'bowl', kind: 'seahorse', c: '#f2a33a' }, 'Dad is paying.');
+  g('jellyfish', 'Moon Jelly', 'r', 'sweet', { decor: 'pond' }, { a: 'bowl', kind: 'jelly', c: '#d9c8f0', c2: '#b8a0e0', water: '#9fd4ec' }, 'No brain. Great palate.');
+  g('puffer', 'Pufferfish', 'r', 'savory', { decor: 'pond', lvl: 7 }, { a: 'bowl', kind: 'puffer', c: '#e0c060', c2: '#6d5a2a' }, 'Takes the prices personally.');
+  g('shrimp', 'Cherry Shrimp', 'r', 'savory', { decor: 'pond', lvl: 5 }, { a: 'bowl', kind: 'shrimp', c: '#e4372e' }, 'Has a shrimp at the table next to him. Awkward.');
+  g('octopus', 'Dumbo Octopus', 'r', 'savory', { decor: 'pond', lvl: 9 }, { a: 'bowl', kind: 'octopus', c: '#f49fb0' }, 'Holds eight spoons, compliments all of them.');
+  g('starfish', 'Sea Star', 'r', 'savory', { decor: 'pond', lvl: 6 }, { a: 'bowl', kind: 'star', c: '#e4772e' }, 'Stomach comes out to meet the food.');
+  g('lobster', 'Lobsterling', 'r', 'savory', { decor: 'pond', lvl: 8 }, { a: 'crab', kind: 'lobster', c: '#2f5f8a', c2: '#1f4f66' }, 'Glad this is a vegetable place.');
+  g('scorpion', 'Sand Scorpion', 'r', 'savory', { decor: 'sand', lvl: 8 }, { a: 'crab', kind: 'scorpion', c: '#c9a06a' }, 'Glows under moonlight. Bring the bill carefully.');
+  g('spider', 'Jumping Spider', 'r', 'savory', { lvl: 5 }, { a: 'crab', kind: 'spider', c: '#3d3440', b: '#4a4250', c2: '#ffdd4a', mark: 'spots' }, 'Waves hello with both front legs.');
+  g('mantis', 'Orchid Mantis Nymph', 'r', 'savory', { decor: 'honey', lvl: 6 }, { a: 'insect', kind: 'mantis', c: '#f7c4d0', c2: '#e88aa0', leg2: '#e88aa0' }, 'Looks like the centrepiece.');
+  g('lion_cub', 'Lion Cub', 'r', 'savory', { lvl: 9 }, { a: 'quad', c: '#e0ae5a', mane: '#c9762e', ear: 'round', tail: 'tuft', c3: '#8a4a20', b: '#fff1d6' }, 'Roars. It comes out as a squeak.');
+  g('tiger_cub', 'Tiger Cub', 'r', 'savory', { lvl: 10 }, { a: 'quad', c: '#e8862e', c2: '#2b2b33', mark: 'stripes', ear: 'round', tail: 'long', b: '#fff8e8' }, 'Stalks the dessert trolley.');
+  g('leopard', 'Leopard Cub', 'r', 'savory', { lvl: 9 }, { a: 'quad', c: '#e0ba6a', c2: '#5a3a2a', mark: 'spots', ear: 'round', tail: 'long', b: '#fff8e8' }, 'Takes the meal up on the shelf.');
+  g('lynx', 'Lynx Kitten', 'r', 'savory', { decor: 'yarn' }, { a: 'quad', c: '#c9a880', c2: '#6d4f30', mark: 'spots', ear: 'point', tail: 'stub', b: '#fff8e8' }, 'Those ear tufts are real.');
+  g('siamese', 'Siamese Kitten', 'r', 'savory', { decor: 'yarn' }, { a: 'quad', c: '#efe1cf', earc: '#5a4032', legc: '#5a4032', c2: '#5a4032', facemark: 'patch', ear: 'point', tail: 'long', b: '#efe1cf' }, 'Has complaints. Will sing them.');
+  g('zebra', 'Zebra Foal', 'r', 'fresh', { decor: 'hay', lvl: 8 }, { a: 'quad', c: '#fff8e8', c2: '#2b2b33', mark: 'stripes', mane: '#2b2b33', ear: 'point', tail: 'tuft', c3: '#2b2b33', snout: 'wide', neck: 2, b: '#e6e2dc' }, 'Barcode on the house.');
+  g('fawn', 'Fawn', 'r', 'fresh', { decor: 'moss', lvl: 6 }, { a: 'quad', c: '#c98f5a', c2: '#fff8e8', mark: 'spots', ear: 'point', tail: 'stub', neck: 2, b: '#fff1d6' }, 'Startles at the kettle.');
+  g('reindeer', 'Reindeer Calf', 'r', 'earthy', { decor: 'moss', lvl: 9 }, { a: 'quad', c: '#9a7a5a', b: '#efe1cf', ear: 'point', horn: 'antler', tail: 'stub', neck: 2, nose: C.tomato }, 'Busy once a year. Otherwise available.');
+  g('llama', 'Llama Cria', 'r', 'fresh', { decor: 'hay', lvl: 7 }, { a: 'quad', c: '#fff1d6', wool: '#fff8e8', ear: 'tall', neck: 4, tail: 'short', snout: 'wide', hr: 4 }, 'Judges you. Spits rarely.');
+  g('alpaca', 'Alpaca Cria', 'r', 'fresh', { decor: 'hay', lvl: 7 }, { a: 'quad', c: '#c9a880', wool: '#e0c8a8', ear: 'point', neck: 4, tail: 'short', snout: 'wide', hr: 4 }, 'Softest guest in the room.');
+  g('camel', 'Camel Calf', 'r', 'fresh', { decor: 'sand', lvl: 9 }, { a: 'quad', c: '#d9b077', ear: 'tiny', neck: 3, hump: 1, tail: 'tuft', snout: 'wide', hr: 4 }, 'Will not need water until Sunday.');
+
+  // Epic: pocket sized versions of very big animals
+  g('elephant', 'Pocket Elephant', 'e', 'fresh', { lvl: 10, decor: 'marble' }, { a: 'quad', c: '#9aa7b0', c2: '#7f8c96', bigEar: 1, ear: 'none', snout: 'trunk', hr: 6, tail: 'tuft', nocheek: 1, tusk: 1 }, 'Never forgets an order. Or a wrong order.');
+  g('giraffe', 'Pocket Giraffe', 'e', 'fresh', { lvl: 10, decor: 'bamboo' }, { a: 'quad', c: '#efb95a', c2: '#a0683a', mark: 'patch', ear: 'point', neck: 5, horn: 'stub', hornc: C.bark, tail: 'tuft', snout: 'wide', hr: 4, b: '#fff1d6' }, 'Can reach the top shelf. Still asks.');
+  g('hippo', 'Pocket Hippo', 'e', 'fresh', { lvl: 11, decor: 'pond' }, { a: 'quad', c: '#9a8aa0', snout: 'wide', b: '#f7c4c0', ear: 'tiny', tail: 'short', hr: 6, nocheek: 1 }, 'Takes the whole bowl in one yawn.');
+  g('rhino', 'Pocket Rhino', 'e', 'fresh', { lvl: 12, decor: 'sand' }, { a: 'quad', c: '#a0a4a8', ear: 'point', snout: 'wide', horn: 'nose', tail: 'tuft', hr: 5, nocheek: 1 }, 'Terrible eyesight. Excellent nose.');
+  g('bear', 'Pocket Bear', 'e', 'sweet', { lvl: 10, flavor: 'sweet' }, { a: 'quad', c: '#7a553a', b: '#d9b48a', ear: 'round', tail: 'stub', hr: 6, snout: 'wide' }, 'Goes straight for the honey spoon.');
+  g('polar_bear', 'Polar Bear Cub', 'e', 'savory', { lvl: 12, decor: 'pond' }, { a: 'quad', c: '#fff8e8', b: '#efe9dc', ear: 'round', tail: 'stub', hr: 6, snout: 'wide' }, 'Asks if the soup could be colder.');
+  g('walrus', 'Pocket Walrus', 'e', 'savory', { lvl: 12, decor: 'pond' }, { a: 'long', c: '#a07a5a', y: 15, hr: 5, ear: 'none', tusk: 1, nolegs: 1, flipper: '#7a553a', tail: 'none', nose: C.ink }, 'Those are not chopsticks.');
+  g('seal', 'Harp Seal Pup', 'e', 'savory', { lvl: 11, decor: 'pond' }, { a: 'long', c: '#fff8e8', y: 16, hr: 4, ear: 'none', nolegs: 1, flipper: '#d5dde0', tail: 'none' }, 'The whole room goes quiet.');
+  g('tapir', 'Tapir Calf', 'e', 'fresh', { lvl: 11, decor: 'moss' }, { a: 'quad', c: '#6d5a4a', c2: '#fff1d6', mark: 'spots', ear: 'round', snout: 'trunk', tail: 'stub', hr: 5, nocheek: 1 }, 'Striped like a melon. Eats melon.');
+  g('okapi', 'Okapi Calf', 'e', 'fresh', { lvl: 12, decor: 'bamboo' }, { a: 'quad', c: '#6a3f2a', c2: '#fff8e8', mark: 'stripes', ear: 'round', neck: 3, tail: 'tuft', snout: 'wide', b: '#e6e2dc' }, 'Looks like a committee designed him.');
+  g('gorilla', 'Pocket Gorilla', 'e', 'fresh', { lvl: 13, decor: 'bamboo' }, { a: 'up', c: '#3d3a44', b: '#6d6a74', face: '#6d6a74', ear: 'tiny', hr: 5, hy: 9, nose: C.ink }, 'Gentle. Quietly finishes everyone\'s greens.');
+  g('croc', 'Pocket Crocodile', 'e', 'savory', { lvl: 13, decor: 'pond' }, { a: 'long', c: '#4f7f4a', c2: '#2f5a2a', mark: 'scale', tail: 'lizard', snout: 'long', spines: '#2f5a2a', bumpEye: 1, hr: 4 }, 'Smiling, in a way.');
+  g('komodo', 'Komodo Hatchling', 'e', 'savory', { lvl: 14, decor: 'sunlamp' }, { a: 'long', c: '#7a7a5a', c2: '#4f4f3a', mark: 'scale', tail: 'lizard', hr: 4, nose: '#e4c02e' }, 'Tastes the air before committing.');
+  g('emperor', 'Emperor Chick', 'e', 'savory', { lvl: 12, decor: 'pond' }, { a: 'up', c: '#c9ccd4', b: '#fff8e8', face: '#fff8e8', ear: 'none', beak: '#3d3440', hr: 5, hy: 9, feet: '#3d3440' }, 'Waits on his dad\'s feet.');
+  g('snowy_owl', 'Snowy Owlet', 'e', 'savory', { lvl: 10, decor: 'book' }, { a: 'bird', c: '#fff8e8', c2: '#c9ccd4', owl: 1, b: '#ffffff' }, 'Has read the whole cookbook. Disagrees.');
+  g('pheasant', 'Golden Pheasant', 'e', 'nutty', { lvl: 11, decor: 'perch' }, { a: 'bird', c: '#e4372e', b: '#f28a2e', c2: '#2a6fc0', cap: '#ffdd4a', crest: '#ffdd4a', longtail: 1, c3: '#ffdd4a' }, 'Tiny, and the best dressed in town.');
+  g('atlas_moth', 'Atlas Moth', 'e', 'sweet', { lvl: 11, decor: 'honey' }, { a: 'flyer', kind: 'butterfly', c: '#c9762e', wing: '#b0562a', c2: '#d9a860', c3: '#fff8e8' }, 'Has no mouth. Came for the ambience.');
+  g('goliath', 'Goliath Beetle', 'e', 'sweet', { lvl: 12, decor: 'moss' }, { a: 'bug', c: '#fff1d6', c2: '#2b2b33', mark: 'bands', head: '#2b2b33', horn: '#2b2b33' }, 'Larger than the table. Sits under it.');
+  g('bison', 'Pocket Bison', 'e', 'earthy', { lvl: 13, decor: 'hay' }, { a: 'quad', c: '#5a3a2a', mane: '#3d2520', ear: 'tiny', horn: 'stub', tail: 'tuft', hr: 5, snout: 'wide', b: '#7a553a', nocheek: 1 }, 'Stampedes politely.');
+  g('yak', 'Pocket Yak', 'e', 'earthy', { lvl: 14, decor: 'hay' }, { a: 'quad', c: '#4a3a3a', wool: '#5f4a4a', ear: 'tiny', horn: 'curve', tail: 'tuft', hr: 5, snout: 'wide', b: '#7a6464', nocheek: 1 }, 'Brings his own blanket.');
+  g('moose', 'Moose Calf', 'e', 'fresh', { lvl: 13, decor: 'pond' }, { a: 'quad', c: '#5a4032', ear: 'point', horn: 'antler', hornc: '#d9b48a', neck: 2, tail: 'stub', snout: 'wide', b: '#7a5a48', nocheek: 1 }, 'Antlers caught in the bunting again.');
+
+  // Legendary: only come when a Dream Dish is on the counter
+  g('whale', 'Pocket Whale', 'l', 'savory', { dream: 1, lvl: 8 }, { a: 'bowl', kind: 'whale', c: '#3f6fa0', b: '#d5e4ec', water: '#7fc8e8' }, 'Biggest animal in the world. Fits in a bowl here.');
+  g('narwhal', 'Pocket Narwhal', 'l', 'savory', { dream: 1, decor: 'pond' }, { a: 'bowl', kind: 'narwhal', c: '#9ab0c0', water: '#8fd0e8' }, 'Uses the tusk as a very tall fork.');
+  g('trex', 'Tiny T. Rex', 'l', 'savory', { dream: 1, lvl: 10 }, { a: 'rex', c: '#5f9a5a', b: '#c9d8a0', c2: '#3f7f4a', mark: 'spots' }, 'Cannot reach the spoon. Waiters help.');
+  g('triceratops', 'Tiny Triceratops', 'l', 'fresh', { dream: 1, decor: 'moss' }, { a: 'quad', c: '#6a8f9a', frill: '#e4772e', hr: 4, ear: 'none', tail: 'taper', nocheek: 1, b: '#a8c0c8' }, 'Salad please. Sixty six million years late.');
+  g('stego', 'Tiny Stegosaurus', 'l', 'fresh', { dream: 1, decor: 'bamboo' }, { a: 'quad', c: '#7a9f5a', plates: '#e4a03a', ear: 'none', hr: 3, tail: 'taper', nocheek: 1, b: '#a8c88a', lowHead: 4 }, 'Brain the size of a pea. Loves peas.');
+  g('mammoth', 'Tiny Mammoth', 'l', 'earthy', { dream: 1, decor: 'hay' }, { a: 'quad', c: '#8a5f3a', c2: '#6d4a2a', wool: '#8a5f3a', bigEar: 1, ear: 'none', snout: 'trunk', hr: 6, tail: 'tuft', tusk: 1, nocheek: 1 }, 'Back from the ice for the stew.');
+  g('dodo', 'Dodo', 'l', 'nutty', { dream: 1, lvl: 9 }, { a: 'bird', c: '#8f949e', b: '#d9d6cc', c2: '#fff8e8', beak: 'big', beakc: '#e0c060', c3: '#6d6a50', legc: '#e0c060' }, 'Glad to be here. Very glad.');
+  g('sabertooth', 'Sabertooth Kitten', 'l', 'savory', { dream: 1, decor: 'yarn' }, { a: 'quad', c: '#d9a860', c2: '#a06a30', mark: 'spots', ear: 'round', tail: 'stub', tusk: 1, b: '#fff1d6' }, 'Still cannot keep his mouth closed.');
+  g('pterosaur', 'Tiny Pterosaur', 'l', 'savory', { dream: 1, decor: 'perch' }, { a: 'flyer', kind: 'bat', c: '#a0784a', c2: '#c9962e' }, 'Lands on the ceiling lamp. Waits.');
+  g('golden_hamster', 'Golden Dream Hamster', 'l', 'nutty', { gold: 1 }, { a: 'ball', r: 7, c: '#ffc83d', b: '#fff1b0', ear: 'round', inner: '#fff1b0', cheek: '#ff9a4a' }, 'Only seen after the longest sleeps.');
+
+  const byId = Object.fromEntries(list.map((a) => [a.id, a]));
+  const byRar = { c: [], u: [], r: [], e: [], l: [] };
+  list.forEach((a) => byRar[a.rar].push(a));
+  WW.ANIMALS = list;
+  WW.ANIMAL = byId;
+  WW.ANIMALS_BY_RARITY = byRar;
+  WW.RARITY = {
+    c: { n: 'Common', w: 68, color: '#8a7a6a' },
+    u: { n: 'Uncommon', w: 24, color: '#3f7f5a' },
+    r: { n: 'Rare', w: 6.5, color: '#2f6fb0' },
+    e: { n: 'Epic', w: 1.3, color: '#8a4ac0' },
+    l: { n: 'Legendary', w: 0.2, color: '#d0801e' },
+  };
+})((globalThis.WW = globalThis.WW || {}));

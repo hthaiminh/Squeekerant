@@ -1,0 +1,55 @@
+<title>Squeekerant</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+20&family=Pixelify+Sans:wght@600;700&family=VT323&display=swap">
+<style>/*CSS*/</style>
+<div id="app">
+  <header id="hud">
+    <span class="brand">Squeekerant</span>
+    <span class="stat" id="statCash"><img class="px" id="hudCashIcon" alt="Cash"><span class="tabnum" id="hudCash">0</span><span class="till tabnum" id="hudTill"></span></span>
+    <span class="stat" id="statWink"><img class="px" id="hudWinkIcon" alt="Winks"><span class="tabnum" id="hudWinks">0</span></span>
+    <span class="spacer"></span>
+    <span class="levelbox" id="statLevel"><span id="hudLevel">Lv 1</span><span class="xpbar"><i id="hudXp" style="width:0"></i></span></span>
+    <button class="iconbtn" id="btnSound" type="button" aria-label="Sound on or off"><img class="px" id="hudSound" alt=""></button>
+  </header>
+  <div id="main">
+    <div id="stage">
+      <div id="worldwrap">
+        <button id="ribbon" type="button"><span><span class="dot" id="ribbonDot"></span><b id="ribbonState">QUIET HOURS</b></span><span id="ribbonRound" class="tabnum"></span></button>
+        <button id="houseinfo" type="button"><img class="px" id="houseIcon" alt=""><span id="houseText" class="tabnum"></span></button>
+        <div id="viewport">
+          <canvas id="world" aria-label="Your restaurant"></canvas>
+          <div id="topleft">
+            <div id="skybadge"><img class="px" id="skyIcon" alt=""><span id="skyText"></span></div>
+            <div id="placebar">
+              <button class="btn small" id="btnDoor" type="button"><img class="px" id="doorIcon" alt=""><span id="doorText"></span></button>
+              <button class="iconbtn" id="btnArrange" type="button" aria-label="Arrange"><img class="px" id="arrangeIcon" alt=""></button>
+            </div>
+          </div>
+          <div id="zoombar">
+            <button class="iconbtn" id="zoomIn" type="button" aria-label="Zoom in">+</button>
+            <button class="iconbtn" id="zoomOut" type="button" aria-label="Zoom out">-</button>
+            <button class="iconbtn wide" id="zoomFit" type="button" aria-label="Show everything">All</button>
+          </div>
+          <div id="cta"></div>
+        </div>
+      </div>
+      <div id="dock"></div>
+    </div>
+    <aside id="panel"><div id="panelinner"></div></aside>
+  </div>
+  <nav id="tabs" aria-label="Sections"></nav>
+</div>
+<div id="overlay" role="dialog" aria-modal="true"></div>
+<div id="toasts" aria-live="polite"></div>
+<div id="tip" role="tooltip"></div>
+<div id="line">
+  <div class="linebar" id="linebar"></div>
+  <canvas id="linecanvas" aria-label="Dish carousel"></canvas>
+  <div>
+    <button class="btn tomato" id="lineserve" type="button">Serve (space)</button>
+    <button class="btn plain small" id="linequit" type="button">Step off</button>
+  </div>
+</div>
+<script>/*JS*/</script>

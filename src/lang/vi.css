@@ -1,0 +1,15 @@
+/* Vietnamese test build. Only VT323 has the full Vietnamese set, so it takes over everything except the logo, which is plain letters. */
+:root { --display: 'VT323', 'Courier New', monospace; }
+h1, h2, h3 { font-family: 'VT323', 'Courier New', monospace; }
+.panelhead h2 { font-size: 30px; text-shadow: 1px 0 0 currentColor; }
+.ticket h2 { font-size: 32px; text-shadow: 1px 0 0 currentColor; }
+h3, .sec > h3 { font-size: 22px; text-shadow: 0.6px 0 0 currentColor; }
+.btn { font-size: 22px; }
+.btn.small { font-size: 21px; }
+.row .title { font-size: 22px; text-shadow: 0.6px 0 0 currentColor; }
+.tiphead b { font-size: 22px; text-shadow: 0.6px 0 0 currentColor; }
+#ribbon b { font-size: 21px; letter-spacing: 0; }
+.levelbox { font-size: 21px; }
+.iconbtn.wide { width: auto; padding: 3px 6px; }
+.tab { font-size: 15px; white-space: nowrap; }
+@media (max-width: 420px) { .tab { letter-spacing: -0.4px; } }
