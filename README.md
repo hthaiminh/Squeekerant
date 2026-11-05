@@ -2,7 +2,7 @@
 
 A tiny pixel restaurant in a forest, for the Squeekchain community. Your hamster is the head chef. Guests are tiny animals, 180 kinds so far. The real hamster Squeektoshi runs the wheel that powers every kitchen.
 
-This is a playable prototype. Everything runs in the browser, with no server, wallet, token or NFT. Cash and Winks are game points with no real value.
+Live at https://www.squeekerant.online. The restaurant runs in the browser. A small server only keeps the leaderboard. There is no token or NFT, and connecting a wallet only signs a message. Cash and Winks are game points with no real value.
 
 ## How his day runs the game
 
@@ -22,7 +22,7 @@ The daily question on the notice board sometimes asks about his last full day. A
 
 ## Inside, outside and the street
 
-The door of the restaurant leads outside: a wide forest that fills the whole screen, with the market, the decor shop, the leaderboard, the notice board, your mailbox and trade shelf, your tree, and the road to Skirting Street. The street shows five neighbours at a time, on lots the day picks, each building looking the way its owner has made it. Click a house to go in. A signpost takes you to another street with five other houses, three times a day. Real players would come first, with locals filling up whatever is left.
+The door of the restaurant leads outside: a wide forest that fills the whole screen, with the market, the decor shop, the leaderboard, the notice board, your mailbox and trade shelf, your tree, and the road to Skirting Street. The street shows five neighbours at a time, on lots the day picks, each building looking the way its owner has made it. Click a house to go in. A signpost takes you to another street with five other houses, three times a day. The neighbours are local characters, the same for everyone.
 
 There is one list of guests. They walk the road, go through the door, sit, eat and walk back out, so both sides of the door always agree on who is where. A running hamster fills a round's seats in its first few minutes, so those guests stroll up spread over the whole round and people come and go all the time, not in waves. This only changes how it looks, the engine has already counted them. With every seat taken a guest walks on instead of waiting in the doorway. Furniture may close off a seat, the guests then squeeze through as little of it as they can.
 
@@ -48,6 +48,22 @@ You can hang your own ingredients on a shelf. Unlocked goods swap on their own w
 
 Trees and floors always pay cash, with a small chance of an ingredient, a bit of junk or a treasure.
 
+## The leaderboard and wallets
+
+The board lists only restaurants whose owner connected a wallet, ranked by restaurant level, then progress toward the next one, then who got there first. Nothing else is on it, so an empty board is simply empty. A wallet keeps its best restaurant, so starting again takes nobody off the board.
+
+Connecting asks the wallet for its address and one signature on a Sign-In with Ethereum message. There is no fee and no transaction. The server checks the signature and hands back a session that lasts 60 days. Only a restaurant on the real wheel sends its score, right after connecting, within a minute of a new level, and otherwise at most every ten minutes, so the database can sleep. The board itself is cached for five minutes.
+
+**Scores can be forged.** All the game's numbers live in the player's browser, so anyone can edit their save. The server only refuses what cannot have happened: more than 8,000 XP plus 9,000 a day since launch, which stays above the best bot. Look before paying any reward. `players` keeps first and last seen, and `player_days` keeps one line per wallet per day, which the player cannot fake without actually coming back each day:
+
+```sql
+SELECT p.wallet, p.shop, p.level, p.total_xp, p.first_seen, p.last_seen, count(d.day) AS days
+FROM players p LEFT JOIN player_days d USING (wallet)
+WHERE NOT p.hidden GROUP BY p.wallet ORDER BY p.total_xp DESC;
+
+UPDATE players SET hidden = true WHERE wallet = '0x...'; -- takes someone off the board
+```
+
 ## Three clocks in the kitchen
 
 - Stove: real time, always works.
@@ -65,21 +81,26 @@ node tests/sim.js  # a bot plays 30 days on his real rounds and prints prices an
 npm run recording  # refreshes src/data/recording.js from the API and SqueekCore
 ```
 
-There is nothing to install. With network access the game follows the real wheel, so while he sleeps nobody comes in. A restaurant that follows the real wheel waits while the wheel can't be reached, shows no signal and catches up afterwards, it is never mixed with the recording. A new restaurant with no network, as in an Artifact, replays the recording in `src/data/recording.js` on a loop that keeps the time of day, and moves to the real wheel if the network comes back.
+The game itself needs nothing installed. The leaderboard's server needs `npm install` once, and `npm start` runs a local one that keeps its board in memory until you stop it. With network access the game follows the real wheel, so while he sleeps nobody comes in. A restaurant that follows the real wheel waits while the wheel can't be reached, shows no signal and catches up afterwards, it is never mixed with the recording. A new restaurant with no network, as in an Artifact, replays the recording in `src/data/recording.js` on a loop that keeps the time of day, and moves to the real wheel if the network comes back.
 
-Going on a domain takes one file, `dist/index.html`. Everything is inside it and it needs no server. `dist/vi` is only for testing and must not go up.
+## Going live
+
+`vercel deploy --prod` from this folder. `vercel.json` builds `public/index.html`, the only file visitors get, and serves `api/index.js` as one function. `dist/vi` is only for testing and never goes up.
+
+The board needs a Postgres database, its address in the `DATABASE_URL` setting on Vercel, and one more deploy to pick it up. The tables make themselves. Until then the game says the board is not open yet, and everything else works.
 
 ## Layout
 
-- `src/core`: rules (`engine.js`), data sources (`feed.js`), seeded random numbers.
+- `src/core`: rules (`engine.js`), data sources (`feed.js`), the wallet and the board (`wallet.js`), seeded random numbers.
 - `src/data`: guests, food, decor, the world outside with its seasons and weather, the recording.
 - `src/art`: pixel painters, nothing is an image file. `houses.js` paints every building part.
 - `src/ui`: the canvas world with its three places and camera, panels, the carousel game, sound and music, start up.
 - `src/lang`: the Vietnamese test build, left out of the plain build.
+- `server`, `api`: the leaderboard's server, sign in and the rules for a score.
 
 ## Not built yet
 
-Real friends, a server and shared saves. Neighbours, their buildings, the leaderboard and the callers at your shelf are local characters for now. Balance comes from a bot only and needs people to play it. Sound has not been heard on real speakers.
+Real friends and saves that follow a wallet. Neighbours, their buildings and the callers at your shelf are local characters. Connecting needs a wallet in the browser, so a phone must open the page in its wallet app, and a smart contract wallet cannot sign in yet. Balance comes from a bot only and needs people to play it. Sound has not been heard on real speakers.
 
 ## Credits and rules kept
 

@@ -1798,7 +1798,7 @@
     s.streetMoves.n++;
     return null;
   }
-  // Five houses at a time, standing wherever the day puts them. With real players they come first, and locals only fill up what is left.
+  // Five houses at a time, standing wherever the day puts them.
   function streetLots(s, t) {
     const day = dayKey(t);
     const n = s.streetMoves.day === day ? s.streetMoves.n : 0;
@@ -1806,11 +1806,6 @@
     const start = (n % 2) * 5;
     const lots = WW.Rng(WW.hash32('lots', day, s.created, n)).shuffle(WW.STREET.lots.slice());
     return order.slice(start, start + 5).map((nb, i) => ({ id: nb.id, x: lots[i].x + (WW.hash32(nb.id, day, n) % 25) - 12, y: lots[i].y, ext: neighbourExterior(s, nb.id, t), room: neighbourHome(nb.id).room }));
-  }
-  function leaderboard(s, t) {
-    const rows = NEIGHBOURS.map((n) => ({ id: n.id, shop: n.shop, owner: n.n, level: neighbourLevel(s, n.id, t), house: roomLevel(neighbourHome(n.id).room).level, me: false }));
-    rows.push({ id: 'me', shop: s.shop, owner: s.chef.name, level: s.level, house: roomLevel(s.room).level, me: true });
-    return rows.sort((a, b) => b.level - a.level || b.house - a.house || (a.me ? -1 : b.me ? 1 : 0));
   }
   function visitFirst(s, nid, t) {
     const v = neighbourDay(s, nid, t);
@@ -2078,7 +2073,6 @@
     mailDecline,
     whoHas,
     neighbourLevel,
-    leaderboard,
     neighbourHome,
     neighbourDay,
     neighbourDirt,

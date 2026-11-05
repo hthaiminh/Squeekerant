@@ -481,6 +481,12 @@
       p.line(15, 4, 8, 9, '#b8a890');
       p.px(8, 9, C.tomato);
     },
+    wallet(p) {
+      p.rect(1, 4, 14, 10, C.cocoa);
+      p.rect(2, 3, 11, 2, '#8a5a3c');
+      p.rect(9, 7, 6, 4, C.butter);
+      p.px(11, 9, C.ink);
+    },
     trophy(p) {
       p.rect(5, 2, 6, 6, C.butter);
       p.rect(3, 3, 2, 3, C.gold);

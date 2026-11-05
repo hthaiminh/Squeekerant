@@ -61,6 +61,10 @@ img.px, canvas.px { image-rendering: pixelated; display: block; user-select: non
 .stat img { width: 22px; height: 22px; }
 .till { color: var(--butter); font-size: 18px; }
 .spacer { flex: 1; min-width: 0; }
+a.btn { display: inline-block; text-decoration: none; color: inherit; }
+#btnWallet { flex: none; display: inline-flex; align-items: center; gap: 4px; }
+#btnWallet img { width: 18px; height: 18px; }
+#btnWallet.on { background: #dff0d0; }
 .levelbox { display: flex; align-items: center; gap: 6px; font: 400 20px/1 var(--display); white-space: nowrap; cursor: default; }
 .xpbar { width: 58px; height: 8px; background: var(--plum); box-shadow: 0 0 0 2px var(--paper); }
 .xpbar i { display: block; height: 100%; background: var(--butter); }
@@ -93,13 +97,13 @@ img.px, canvas.px { image-rendering: pixelated; display: block; user-select: non
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 3px 8px;
   background: var(--ink); color: var(--paper);
-  font-size: 18px; line-height: 1.1; cursor: pointer; border: 0; width: 100%; text-align: left;
+  font-size: 18px; line-height: 1.1; cursor: pointer; border: 0; width: 0; min-width: 100%; text-align: left;
 }
 #ribbon:hover { background: var(--plum); }
-#houseinfo { display: flex; align-items: center; gap: 6px; width: 100%; padding: 2px 8px; border: 0; background: var(--plum); color: var(--paper); font-size: 17px; line-height: 1.1; cursor: pointer; text-align: left; white-space: nowrap; overflow: hidden; }
+#houseinfo { display: flex; align-items: center; gap: 6px; width: 0; min-width: 100%; padding: 2px 8px; border: 0; background: var(--plum); color: var(--paper); font-size: 17px; line-height: 1.1; cursor: pointer; text-align: left; white-space: nowrap; overflow: hidden; }
 #houseinfo:hover { background: var(--deep); }
 #houseinfo img { width: 16px; height: 16px; flex: none; }
-#houseText { overflow: hidden; text-overflow: ellipsis; }
+#houseText { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 #ribbon b { font: 400 20px/1 var(--display); letter-spacing: 0.03em; }
 #ribbon .dot { display: inline-block; width: 8px; height: 8px; margin-right: 5px; }
 #zoombar { position: absolute; right: 6px; top: 6px; display: flex; gap: 4px; line-height: 1; }
@@ -178,6 +182,18 @@ img.px, canvas.px { image-rendering: pixelated; display: block; user-select: non
 .lockbtn { box-shadow: 0 0 0 2px var(--ink); padding: 2px; width: 26px; height: 26px; }
 .lockbtn.on { background: var(--butter); }
 .row .grow { flex: 1; min-width: 0; }
+.addr { font-size: 15px; line-height: 1.1; color: var(--plum); overflow-wrap: anywhere; cursor: pointer; background: none; border: 0; padding: 0; text-align: left; }
+.addr:hover { color: var(--ink); text-decoration: underline; }
+.ticket .addr { display: block; font-size: 20px; margin: 4px 0 10px; }
+.walletlist { display: grid; gap: 6px; margin-top: 8px; }
+.walletrow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 10px; background: var(--paper); border: 0; box-shadow: 0 0 0 2px var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.walletrow:hover { background: var(--butter); }
+.walletrow img { width: 28px; height: 28px; flex: none; }
+.walletrow .walletmark { width: 28px; height: 28px; flex: none; display: grid; place-items: center; background: var(--plum); color: var(--paper); }
+.walletrow small { display: block; font-size: 16px; color: var(--plum); }
+.wallethelp { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.boardjoin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; padding: 8px; background: #fff0c0; box-shadow: inset 3px 0 0 var(--gold); }
+.boardjoin p { flex: 1 1 200px; margin: 0; }
 .row .title { font: 400 20px/1.05 var(--display); }
 .row .sub { font-size: 17px; color: var(--plum); line-height: 1.05; }
 .row .fxline { color: var(--moss); }
@@ -329,6 +345,8 @@ input[type=text] { width: 100%; background: var(--paper); border: 0; padding: 6p
   #toasts { left: 50%; width: min(92vw, 440px); bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
   .brand { display: none; }
   #hud { gap: 8px; }
+  #walletText { display: none; }
+  #btnWallet { padding: 3px; width: 28px; height: 28px; justify-content: center; }
   .stat { font-size: 20px; }
   .xpbar { width: 40px; }
   #tip { max-width: 240px; }

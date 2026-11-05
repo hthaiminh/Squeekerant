@@ -2,13 +2,20 @@
   "name": "squeekerant",
   "version": "0.2.0",
   "private": true,
+  "engines": {
+    "node": ">=22 <25"
+  },
   "description": "A tiny pixel restaurant powered by a real hamster's wheel",
   "scripts": {
     "start": "node scripts/build.js && node scripts/build.js vi && node scripts/serve.js",
     "build": "node scripts/build.js",
     "build:vi": "node scripts/build.js vi",
-    "test": "node --test tests/engine.test.js",
+    "test": "node --test tests/engine.test.js tests/server.test.js",
     "sim": "node tests/sim.js",
     "recording": "node scripts/fetch-recording.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "viem": "^2.57.16"
   }
 }

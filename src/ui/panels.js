@@ -642,7 +642,7 @@
           'div',
           { class: 'sec' },
           el('h3', null, 'Hire from the street'),
-          el('p', { class: 'note' }, 'In the full game these are your friends. Put someone on cleaning duty if you are annoyed with them.'),
+          el('p', { class: 'note' }, 'Your neighbours will come and work for you. Put someone on cleaning duty if you are annoyed with them.'),
           free.map((n) =>
             el(
               'div',
@@ -817,7 +817,7 @@
       const view = this.streetView();
       const mail = E().mailCount(this.s);
       const chip = (id, label, line) => el('button', { class: 'chip' + (view === id ? ' on' : ''), type: 'button', tip: { title: label, lines: [line] }, on: { click: () => this.open('street', { view: id }) } }, label);
-      return el('div', { class: 'chips' }, g.visit ? chip('here', 'This house', 'Clean, taste and trade here.') : null, chip('board', 'Leaderboard', 'Who runs the highest level restaurant.'), chip('shelf', 'Your shelf', 'Hang up ingredients for neighbours to trade.'), chip('mail', mail ? `Mailbox (${mail})` : 'Mailbox', 'Trade offers and answers.'));
+      return el('div', { class: 'chips' }, g.visit ? chip('here', 'This house', 'Clean, taste and trade here.') : null, chip('board', 'Leaderboard', 'The highest level restaurants with a connected wallet.'), chip('shelf', 'Your shelf', 'Hang up ingredients for neighbours to trade.'), chip('mail', mail ? `Mailbox (${mail})` : 'Mailbox', 'Trade offers and answers.'));
     }
     street() {
       const g = this.game;
@@ -828,23 +828,38 @@
       return this.leaderboard();
     }
     leaderboard() {
-      const s = this.s;
       const g = this.game;
-      const rows = E().leaderboard(s, g.now());
-      const place = rows.findIndex((r) => r.me) + 1;
+      const w = g.wallet;
+      w.refreshBoard();
+      const rows = w.rows();
+      const standing = w.standing();
+      const board = w.board;
+      const top = E().roomLevel(this.s.room).top;
+      let state = null;
+      if (!w.usable) state = 'The leaderboard is on the real site, www.squeekerant.online.';
+      else if (!board) state = w.boardFailed ? 'The leaderboard cannot be reached right now.' : 'Reading the board...';
+      else if (!board.open) state = 'The leaderboard is not open yet.';
+      else if (!rows.length) state = w.connected() ? 'Nobody is on the board yet. Your restaurant joins it as soon as it is on the real wheel.' : 'Nobody is on the board yet. Connect your wallet to be the first.';
       return [
-        this.head('Leaderboard', el('span', { class: 'note tabnum' }, `You are #${place} of ${rows.length}`)),
+        this.head('Leaderboard', standing ? el('span', { class: 'note tabnum' }, `You are #${fmt(standing.place)} of ${fmt(standing.total)}`) : null),
         this.streetChips(),
-        el('p', { class: 'note' }, 'Ranked by restaurant level, then house level. In the full game these are other players.'),
-        rows.map((r, i) => {
-          const n = WW.NEIGHBOUR[r.id];
-          const look = r.me ? { fur: s.chef.fur, hat: s.chef.hat, job: 'chef' } : { fur: n.fur, hat: E().neighbourHome(r.id).chef.hat, job: 'chef' };
+        el('p', { class: 'note' }, 'Only restaurants with a connected wallet are listed. Ranked by restaurant level, then progress toward the next one.'),
+        board && board.open && !w.connected() ? el('div', { class: 'boardjoin' }, el('p', { class: 'note' }, 'Put your restaurant on the board. You only sign a message. It costs nothing and sends no transaction.'), btn('Connect wallet', () => g.showWallet(), 'small tomato')) : null,
+        state ? el('p', { class: 'note', style: 'margin-top:6px' }, state) : null,
+        rows.map((r) => {
+          const look = { fur: WW.FURS[r.fur] ? r.fur : 'golden', hat: WW.HATS[r.hat] ? r.hat : 'toque', job: 'chef' };
           return el(
             'div',
-            { class: 'row rank' + (r.me ? ' me' : ''), tip: { title: r.shop, lines: [`Run by ${r.owner}.`, `Restaurant level ${r.level}`, `House level ${r.house} of ${E().roomLevel(s.room).top}`] } },
-            el('b', { class: 'rankno tabnum r' + (i + 1) }, i + 1),
-            el('div', { class: 'spr tall' }, img(WW.hamsterPose(look, 0), '', r.owner)),
-            el('div', { class: 'grow' }, el('div', { class: 'title' }, r.shop), el('div', { class: 'sub' }, `${r.owner} · Level ${r.level} · House ${r.house}`))
+            { class: 'row rank' + (r.me ? ' me' : ''), tip: { title: r.shop, lines: [`Run by ${r.chef}.`, `Restaurant level ${r.level}`, `House level ${r.house} of ${top}`] } },
+            el('b', { class: 'rankno tabnum r' + r.place }, r.place),
+            el('div', { class: 'spr tall' }, img(WW.hamsterPose(look, 0), '', r.chef)),
+            el(
+              'div',
+              { class: 'grow' },
+              el('div', { class: 'title' }, r.shop),
+              el('div', { class: 'sub' }, `${r.chef} · Level ${r.level} · House ${r.house}`),
+              el('button', { class: 'addr tabnum', type: 'button', 'aria-label': 'Copy address', on: { click: () => g.copyText(r.wallet, 'Address copied.') } }, r.wallet)
+            )
           );
         }),
       ];

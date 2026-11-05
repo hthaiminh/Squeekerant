@@ -875,17 +875,8 @@ test('finds sell for what they say, trophies do not sell', () => {
   assert.ok(E.sellDecor(s, 'cork'), 'nothing left to sell');
 });
 
-test('the leaderboard ranks by level and includes you', () => {
-  const s = fresh(feedOf([0]));
-  const rows = E.leaderboard(s, 0);
-  assert.equal(rows.length, WW.NEIGHBOURS.length + 1);
-  for (let i = 1; i < rows.length; i++) assert.ok(rows[i - 1].level >= rows[i].level);
-  assert.equal(rows.filter((r) => r.me).length, 1);
-  s.level = 99;
-  assert.ok(E.leaderboard(s, 0)[0].me);
-  const later = E.leaderboard(s, 86400000 * 30);
-  const mochiThen = rows.find((r) => r.id === 'mochi').level;
-  assert.ok(later.find((r) => r.id === 'mochi').level > mochiThen, 'neighbours grow too');
+test('the board only has wallets, so the game makes no names up for it', () => {
+  assert.equal(E.leaderboard, undefined);
 });
 
 test('a very long absence does not replay every guest it missed', () => {

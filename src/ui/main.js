@@ -12,6 +12,7 @@
   class Game {
     constructor() {
       this.feed = new WW.RecordingFeed(WW.RECORDING);
+      this.wallet = new WW.Wallet();
       this.sfx = new WW.Sound();
       this.music = new WW.Music(this.sfx);
       this.s = null;
@@ -60,16 +61,142 @@
       const key = this.tickN >> 3;
       if (this.ranksKey !== key || !this.ranksNow) {
         this.ranksKey = key;
-        const rows = E.leaderboard(this.s, this.now());
-        const short = (r, i) => ({ place: i + 1, name: r.shop.toUpperCase().slice(0, 15).trim(), level: r.level, me: r.me });
+        const w = this.wallet;
+        w.refreshBoard();
+        const rows = w.rows();
+        // The little sign font only has plain letters. A name it cannot write at all shows the start of the wallet.
+        const short = (r) => {
+          const plain = String(r.shop).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\u0110\u0111]/g, 'D').toUpperCase();
+          return { place: r.place, name: (/[A-Z0-9]/.test(plain) ? plain : String(r.wallet).toUpperCase()).slice(0, 15).trim(), level: r.level, me: r.me };
+        };
         const top = rows.slice(0, 5).map(short);
         const mine = rows.findIndex((r) => r.me);
-        if (mine >= 5) top[4] = short(rows[mine], mine);
+        if (mine >= 5) top[4] = short(rows[mine]);
         this.ranksNow = top;
-        this.rankOfMe = mine + 1;
-        this.rankCount = rows.length;
+        const standing = w.standing();
+        this.rankOfMe = standing ? standing.place : 0;
+        this.rankCount = standing ? standing.total : w.board ? w.board.total : 0;
       }
       return this.ranksNow;
+    }
+    // What the board outside says when it has no names to show.
+    ranksNote() {
+      const w = this.wallet;
+      if (!w.usable) return ['SEE THE BOARD', 'ON THE REAL SITE'];
+      if (!w.board) return w.boardFailed ? ['CANNOT REACH', 'THE BOARD'] : ['READING...'];
+      if (!w.board.open) return ['OPENING SOON'];
+      return ['NOBODY YET', 'CONNECT A WALLET', 'TO BE THE FIRST'];
+    }
+    copyText(text, done) {
+      const fail = () => this.toast('Could not copy that here.', 'bad');
+      if (!navigator.clipboard) return fail();
+      navigator.clipboard.writeText(text).then(() => this.toast(done, 'good'), fail);
+    }
+    // The wallet button and everything showing the board follow the wallet.
+    walletChanged() {
+      const w = this.wallet;
+      const button = document.getElementById('btnWallet');
+      const text = document.getElementById('walletText');
+      if (w.expired) {
+        w.expired = false;
+        this.toast('Your wallet sign in ended. Connect again to keep your place up to date.', 'bad');
+      }
+      button.classList.toggle('on', w.connected());
+      // Short here because of the space. The full address is one click away.
+      text.textContent = w.connected() ? `${w.address.slice(0, 6)}...${w.address.slice(-4)}` : WW.tr('Connect wallet');
+      this.ranksNow = null;
+      this.dockKey = null;
+      if (this.s && this.panels && this.panels.tab === 'street' && this.panels.streetView() === 'board') this.panels.render();
+      if (this.walletTicket) this.showWallet();
+    }
+    closeWallet() {
+      this.walletWait = null;
+      this.wallet.cancel();
+      this.closeOverlay();
+    }
+    // Everything about the wallet happens on one card.
+    showWallet() {
+      const w = this.wallet;
+      const close = () => this.closeWallet();
+      if (!w.usable) {
+        this.walletTicket = 'info';
+        return this.showTicket(el('h2', null, 'Connect a wallet'), el('p', null, 'The leaderboard and wallets work on the real site, www.squeekerant.online. This preview cannot reach them.'), this.actions(btn('Close', close, 'plain')));
+      }
+      w.refreshBoard();
+      if (w.board && !w.board.open) {
+        this.walletTicket = 'info';
+        return this.showTicket(el('h2', null, 'Connect a wallet'), el('p', null, 'The leaderboard is not open yet. Wallets can connect as soon as it is.'), this.actions(btn('Close', close, 'plain')));
+      }
+      if (w.connected()) {
+        this.walletTicket = 'mine';
+        const standing = w.standing();
+        const copy = () => this.copyText(w.address, 'Address copied.');
+        return this.showTicket(
+          el('h2', null, 'Your wallet'),
+          el('button', { class: 'addr tabnum', type: 'button', tip: { title: 'Copy address', lines: [] }, on: { click: copy } }, w.address),
+          el('p', null, standing ? `You are #${fmt(standing.place)} of ${fmt(standing.total)} on the leaderboard.` : 'Your restaurant joins the leaderboard as soon as it is on the real wheel.'),
+          this.actions(
+            btn('Copy address', copy, 'plain'),
+            btn('Disconnect', () => {
+              w.disconnect();
+              close();
+              this.toast('Wallet disconnected. Your place on the board stays.');
+            }, 'plain'),
+            btn('Close', close, 'tomato')
+          )
+        );
+      }
+      this.walletTicket = 'list';
+      const list = w.list();
+      if (!list.length) {
+        const here = encodeURIComponent(location.href);
+        const phone = !this.hasMouse;
+        return this.showTicket(
+          el('h2', null, 'Connect a wallet'),
+          el('p', null, 'No wallet found in this browser.'),
+          el('p', { class: 'note' }, phone ? "On a phone, open this page in your wallet app's browser." : 'Install a browser wallet such as MetaMask or Rabby, then reload this page.'),
+          el(
+            'div',
+            { class: 'wallethelp' },
+            phone
+              ? [el('a', { class: 'btn small', href: `https://metamask.app.link/dapp/${location.host}${location.pathname}`, rel: 'noopener noreferrer' }, 'Open in MetaMask'), el('a', { class: 'btn small', href: `https://link.trustwallet.com/open_url?coin_id=60&url=${here}`, rel: 'noopener noreferrer' }, 'Open in Trust Wallet')]
+              : [el('a', { class: 'btn small', href: 'https://metamask.io/download/', target: '_blank', rel: 'noopener noreferrer' }, 'MetaMask'), el('a', { class: 'btn small', href: 'https://rabby.io/', target: '_blank', rel: 'noopener noreferrer' }, 'Rabby')]
+          ),
+          this.actions(btn('Close', close, 'plain'))
+        );
+      }
+      const pick = async (entry, i) => {
+        this.walletWait = i;
+        this.showWallet();
+        try {
+          const done = await w.connect(entry);
+          if (!done) return;
+          this.walletWait = null;
+          this.walletTicket = null;
+          this.closeOverlay();
+          this.toast(this.feed.mode === 'live' ? 'Wallet connected. Your restaurant is on the leaderboard.' : 'Wallet connected. Your restaurant joins the leaderboard as soon as it is on the real wheel.', 'good');
+          this.walletChanged();
+        } catch (e) {
+          this.walletWait = null;
+          if (this.walletTicket === 'list') this.showWallet();
+          this.toast(e && e.code === 4001 ? 'Cancelled in your wallet.' : e && e.code === -32002 ? 'Your wallet already has a request waiting. Open it to answer.' : (e && e.message) || 'That wallet could not sign in.', 'bad');
+        }
+      };
+      this.showTicket(
+        el('h2', null, 'Connect a wallet'),
+        el('p', null, 'Only restaurants with a connected wallet are on the leaderboard.'),
+        el(
+          'div',
+          { class: 'walletlist' },
+          list.map((entry, i) => {
+            const name = String(entry.info.name || 'Wallet');
+            const icon = /^data:image\/(svg\+xml|png|webp|jpeg|gif)[;,]/i.test(entry.info.icon || '');
+            return el('button', { class: 'walletrow', type: 'button', on: { click: () => pick(entry, i) } }, icon ? el('img', { src: entry.info.icon, alt: '' }) : el('span', { class: 'walletmark' }, name[0]), el('span', null, el('b', null, name), el('small', null, this.walletWait === i ? 'Check your wallet...' : 'Installed')));
+          })
+        ),
+        el('p', { class: 'note' }, 'You only sign a message. It costs nothing and sends no transaction.'),
+        this.actions(btn('Close', close, 'plain'))
+      );
     }
     streetMovesText() {
       return `${E.streetMovesLeft(this.s, this.now())} LEFT`;
@@ -175,6 +302,14 @@
         this.toggleArrange();
       });
       this.refreshSoundIcon();
+      document.getElementById('walletIcon').src = WW.iconCanvas('wallet').toDataURL();
+      document.getElementById('btnWallet').addEventListener('click', () => {
+        this.sound('tap');
+        this.wallet.lookAround();
+        this.showWallet();
+      });
+      this.wallet.onChange = () => this.walletChanged();
+      this.walletChanged();
       document.getElementById('btnSound').addEventListener('click', () => {
         this.sfx.on = !this.sfx.on;
         if (this.s) this.s.soundOn = this.sfx.on;
@@ -193,7 +328,8 @@
       tipOf('statWink', () => ({ icon: WW.iconCanvas('wink'), title: 'Winks', lines: ['You earn one for every round he isn\'t running.', 'Spend them in the Test Kitchen, on hints and on Dream Dishes.', `Holds up to ${WW.CFG.WINK_BANK}.`] }));
       tipOf('statLevel', () => (this.s ? { title: `Restaurant level ${this.s.level}`, lines: [`${fmt(this.s.xp)} of ${fmt(E.xpNeed(this.s.level))} toward the next level.`, 'Guests, orders and upgrades all count.'] } : null));
       tipOf('btnSound', { title: 'Music and sound', lines: ['Turn music and sound on or off.'] });
-      tipOf('ribbon', { title: 'The Wheel', lines: ['What he is doing right now. Click for the numbers.'] });
+      tipOf('btnWallet', () => ({ icon: WW.iconCanvas('wallet'), title: 'Wallet', lines: this.wallet.connected() ? [this.wallet.address, 'Click for your place on the leaderboard.'] : ['Connect a wallet to put your restaurant on the leaderboard.', 'You only sign a message. It costs nothing and sends no transaction.'] }));
+      tipOf('ribbon', () => ({ title: 'The Wheel', lines: [this.feed.mode === 'recording' ? 'A replay of his real rounds, because the real wheel cannot be reached right now.' : 'What he is doing right now. Click for the numbers.'] }));
       tipOf('houseinfo', () => this.houseTip());
       tipOf('skybadge', () => this.skyTip());
       tipOf('btnDoor', () => this.doorTip());
@@ -460,7 +596,7 @@
           return { icon: WW.iconCanvas('orders'), title: 'The notice board', lines: ['Click for party orders and the daily question.'] };
         case 'ranks': {
           this.topRanks();
-          return { icon: WW.iconCanvas('trophy'), title: 'Leaderboard', lines: [`You are #${this.rankOfMe} of ${this.rankCount}.`, 'Ranked by restaurant level, then house level.', 'Click to see everyone.'] };
+          return { icon: WW.iconCanvas('trophy'), title: 'Leaderboard', lines: [this.rankOfMe ? `You are #${this.rankOfMe} of ${this.rankCount}.` : 'Only restaurants with a connected wallet are listed.', 'Click to see everyone.'] };
         }
         case 'gate':
           return { icon: WW.iconCanvas('street'), title: 'Skirting Street', lines: ['Click to walk over to your neighbours.'] };
@@ -750,6 +886,7 @@
     }
 
     tick() {
+      this.wallet.tick(this.s, E, this.feed.mode === 'live');
       if (!this.s) return;
       const s = this.s;
       const t = this.now();
@@ -877,7 +1014,9 @@
     }
     updateHouseInfo() {
       const f = this.houseFacts();
-      const text = `House level ${f.level} of ${f.top} · Room ${f.st.room.cols}x${f.st.room.rows} · ${f.seats} seat${f.seats === 1 ? '' : 's'} · Rating ${f.stars.toFixed(1)}`;
+      // A phone has room for about forty letters here.
+      const house = this.desktop() ? `House level ${f.level} of ${f.top} · Room ${f.st.room.cols}x${f.st.room.rows}` : `House ${f.level}/${f.top} · ${f.st.room.cols}x${f.st.room.rows}`;
+      const text = `${house} · ${f.seats} seat${f.seats === 1 ? '' : 's'} · Rating ${f.stars.toFixed(1)}`;
       if (text === this.houseText) return;
       this.houseText = text;
       document.getElementById('houseText').textContent = WW.tr(text);
@@ -912,7 +1051,9 @@
       const ss = String(Math.floor(left / 1000) % 60).padStart(2, '0');
       const colors = { running: C.leaf, breather: C.butter, quiet: C.lilac, unknown: C.steel };
       const labels = { running: `RUNNING ${live.rpm} RPM`, breather: 'CATCHING HIS BREATH', quiet: this.quietText().toUpperCase(), unknown: 'NO SIGNAL' };
-      document.getElementById('ribbonState').textContent = WW.tr(this.visit ? `AT ${this.visit.home.shop.toUpperCase()}` : labels[live.state]);
+      const state = WW.tr(this.visit ? `AT ${this.visit.home.shop.toUpperCase()}` : labels[live.state]);
+      // A replay must never pass for the real hamster.
+      document.getElementById('ribbonState').textContent = this.feed.mode === 'recording' && !this.visit ? `${WW.tr('REPLAY')} · ${state}` : state;
       document.getElementById('ribbonDot').style.background = colors[live.state];
       document.getElementById('ribbonRound').textContent = WW.tr(`Round ends ${mm}:${ss}`);
       this.updateHouseInfo();
@@ -1112,7 +1253,7 @@
         el(
           'div',
           { class: 'dockcard' },
-          el('div', { class: 'places' }, this.placeButton('basket', 'Market', open('market')), this.placeButton('chair', 'Decor Shop', open('decor', { kind: 'yard' })), this.placeButton('street', 'Street', () => this.walkTo('street')), this.placeButton('orders', 'Notice Board', open('orders'), board ? '!' : 0), this.placeButton('mail', 'Mailbox', open('street', { view: 'mail' }), mail), this.placeButton('basket', 'Your shelf', open('street', { view: 'shelf' })), this.placeButton('trophy', `Leaderboard #${this.rankOfMe}`, open('street', { view: 'board' }))),
+          el('div', { class: 'places' }, this.placeButton('basket', 'Market', open('market')), this.placeButton('chair', 'Decor Shop', open('decor', { kind: 'yard' })), this.placeButton('street', 'Street', () => this.walkTo('street')), this.placeButton('orders', 'Notice Board', open('orders'), board ? '!' : 0), this.placeButton('mail', 'Mailbox', open('street', { view: 'mail' }), mail), this.placeButton('basket', 'Your shelf', open('street', { view: 'shelf' })), this.placeButton('trophy', this.rankOfMe ? `Leaderboard #${this.rankOfMe}` : 'Leaderboard', open('street', { view: 'board' }))),
           el('div', { class: 'dockrow note' }, `Charm ${E.charmOf(s)}: about ${Math.round(E.attractOf(s) * 100)}% more guests walk in.`)
         )
       );
@@ -1547,6 +1688,7 @@
       ov.classList.add('show');
     }
     closeOverlay() {
+      this.walletTicket = null;
       document.getElementById('overlay').classList.remove('show');
       this.pumpQueue();
     }

@@ -1492,7 +1492,7 @@
     // The leaderboard stands outside, with the names written on it. Only rewritten when the names change.
     drawRanks(ctx, r) {
       const rows = this.game.topRanks();
-      const key = JSON.stringify(rows);
+      const key = JSON.stringify([rows, rows.length ? null : this.game.ranksNote()]);
       if (this.ranksKey !== key) {
         this.ranksKey = key;
         const c = WW.makeCanvas(r.w, r.h);
@@ -1501,6 +1501,10 @@
         const title = 'LEADERBOARD';
         WW.tinyText(x, title, Math.round(r.w / 2 - WW.tinyWidth(title) / 2), 15, C.paper);
         const colors = [C.butter, '#d8dce0', '#e0a070'];
+        // No names yet: the board says why.
+        if (!rows.length) {
+          this.game.ranksNote().forEach((line, i) => WW.tinyText(x, line, Math.round(r.w / 2 - WW.tinyWidth(line) / 2), 40 + i * 11, '#e8f0e0'));
+        }
         rows.forEach((row, i) => {
           const y = 29 + i * 11;
           if (row.me) {

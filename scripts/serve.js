@@ -3,9 +3,29 @@
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
+const crypto = require('crypto');
+const { createApp } = require('../server/app');
+const { memoryStore } = require('../server/store');
 const dist = path.join(__dirname, '..', 'dist');
 const PAGES = { '/': 'index.html', '/vi': 'vi/index.html', '/vi/': 'vi/index.html' };
 const LAST_TRY = 10;
+// A leaderboard for trying things here. It lives in memory and is empty again after a restart.
+const api = createApp({ store: memoryStore(), secret: crypto.randomBytes(32), local: true });
+function serveApi(req, res, pathname) {
+  let raw = '';
+  req.on('data', (part) => {
+    if (raw.length < 100000) raw += part;
+  });
+  req.on('end', async () => {
+    let body = null;
+    try {
+      body = raw ? JSON.parse(raw) : null;
+    } catch (e) {}
+    const out = await api({ method: req.method, path: pathname, headers: req.headers, body });
+    res.writeHead(out.status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(out.json));
+  });
+}
 
 const server = http.createServer((req, res) => {
   const pathname = req.url.split('?')[0];
@@ -13,6 +33,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(204);
     return res.end();
   }
+  if (pathname.startsWith('/api/')) return serveApi(req, res, pathname);
   const page = PAGES[pathname];
   if (!page) {
     res.writeHead(404, { 'content-type': 'text/plain' });
