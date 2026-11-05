@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
 const src = path.join(__dirname, '..', 'src');
-for (const f of ['core/rng.js', 'art/px.js', 'art/scene.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'core/engine.js']) require(path.join(src, f));
+for (const f of ['core/rng.js', 'art/px.js', 'art/scene.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'core/feed.js', 'core/engine.js']) require(path.join(src, f));
 const WW = globalThis.WW;
 const E = WW.Engine;
 const ROUND = 600000;
@@ -1368,4 +1368,106 @@ test('whole houses bought in the last build are paid back, and the chimney moves
   assert.equal(up.exterior.trim, 'none');
   assert.ok(up.exteriors['crown:chimney']);
   for (const slot of Object.keys(WW.EXTERIOR)) assert.ok(WW.EXTERIOR[slot][up.exterior[slot]], slot);
+});
+
+// The practice kitchen's pretend hamster, on a clock the test turns by hand.
+function practice() {
+  let real = 1800000000000;
+  const feed = new WW.PracticeFeed(() => real);
+  const s = E.newGame(feed.now(), feed, { name: 'Bean', shop: 'Practice' });
+  return {
+    feed,
+    s,
+    wait(ms) {
+      real += ms;
+      const t = feed.now();
+      E.advance(s, feed, t);
+      const events = [];
+      E.pulse(s, feed, t, events);
+      return events;
+    },
+  };
+}
+
+test('practice: the pretend hamster starts asleep and nobody comes in', () => {
+  const { feed, s, wait } = practice();
+  const live = feed.live(feed.now());
+  assert.strictEqual(live.state, 'quiet');
+  assert.strictEqual(live.cum, 0);
+  assert.strictEqual(wait(60000).length, 0);
+  assert.strictEqual(s.stats.served, 0);
+});
+
+test('practice: when he runs one guest comes for every ten passes, at the same speed however fast time goes', () => {
+  for (const rate of [1, 10, 60]) {
+    const { feed, wait } = practice();
+    feed.setRate(rate);
+    feed.run();
+    const before = feed.live(feed.now()).cum;
+    const events = [];
+    for (let i = 0; i < 40; i++) events.push(...wait(250));
+    const passes = feed.live(feed.now()).cum - before;
+    assert.ok(passes >= 49 && passes <= 51, 'passes ' + passes + ' at rate ' + rate);
+    assert.ok(events.length >= 4 && events.length <= 6, 'guests ' + events.length + ' at rate ' + rate);
+    assert.ok(Number.isFinite(feed.live(feed.now()).cum));
+  }
+});
+
+test('practice: pay waits in the till until the round settles', () => {
+  const { feed, s, wait } = practice();
+  feed.setRate(10);
+  feed.run();
+  for (let i = 0; i < 40; i++) wait(250);
+  assert.ok(s.till > 0);
+  const cash = s.cash;
+  const till = s.till;
+  feed.finishRound();
+  wait(1);
+  assert.ok(s.cash >= cash + till);
+});
+
+test('practice: a jump in time brings no pile of guests', () => {
+  const { feed, wait } = practice();
+  feed.setRate(10);
+  feed.run();
+  wait(1000);
+  const before = feed.live(feed.now()).cum;
+  feed.jump(5 * 600000);
+  assert.strictEqual(feed.live(feed.now()).cum, before);
+  assert.ok(wait(1).length <= 1);
+});
+
+test('practice: quiet rounds earn Winks, the pot simmers, and a long sleep ends in a dream the pantry can cook', () => {
+  const { feed, s, wait } = practice();
+  s.pantry.oats = 30;
+  assert.strictEqual(E.startCook(s, 'oat_porridge', 2, feed, feed.now()), null);
+  const winks = s.winks;
+  feed.sleep();
+  feed.setRate(600);
+  for (let i = 0; i < 12; i++) wait(1000);
+  assert.ok(s.winks >= winks + 10, 'winks ' + s.winks);
+  assert.strictEqual(s.stations[2].job, null);
+  feed.setRate(60);
+  feed.jump((WW.CFG.DREAM_ROUNDS + 2) * 600000);
+  feed.run();
+  wait(1000);
+  assert.strictEqual(s.dreamDish, null, 'the dream comes when the round settles');
+  feed.finishRound();
+  wait(1);
+  assert.ok(s.dreamDish);
+  const def = E.dishDef(s.dreamDish.key);
+  for (const id in def.ing) assert.ok((s.pantry[id] || 0) >= def.ing[id], 'the practice pantry has ' + id);
+  assert.strictEqual(E.canCook(s, def.id, 0), null);
+});
+
+test('practice: round numbers add up, so the wheel panel reads the same as the guests counted', () => {
+  const { feed, s, wait } = practice();
+  feed.setRate(60);
+  feed.run();
+  for (let i = 0; i < 80; i++) wait(250);
+  const t = feed.now();
+  const settled = feed.settled(t);
+  assert.strictEqual(s.clock.round, settled);
+  assert.strictEqual(feed.round(settled).cum, s.clock.cum);
+  assert.strictEqual(feed.workBetween(1, settled), s.clock.cum);
 });

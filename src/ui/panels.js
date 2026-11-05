@@ -1084,7 +1084,63 @@
         el('div', { class: 'sec' }, el('h3', null, 'Guest book trophies'), el('div', { class: 'grid' }, WW.CFG.BOOK_TROPHIES.map((n) => el('div', { class: 'cell food', tip: () => tips.decor(WW.DECOR_BY_ID['trophy_' + n]) }, img(s.trophies[n] ? WW.decorCanvas('trophy_' + n) : silhouette(WW.decorCanvas('trophy_' + n)), '', `${n} guests`), el('span', { class: 'cap' }, String(n)))))),
         el('div', { class: 'sec' }, el('h3', null, `Dream journal, ${journal.length} of ${WW.DREAMS.length * 2}`), journal.length ? el('div', { class: 'grid' }, journal.map((k) => el('div', { class: 'cell food', tip: () => tips.dish(E().dishDef(k), s) }, dishImg(E().dishDef(k)), el('span', { class: 'cap' }, E().dishDef(k).n)))) : el('p', { class: 'note' }, 'His first long sleep will write the first page.')),
         el('div', { class: 'sec' }, el('h3', null, 'Lately'), s.log.slice(0, 8).map((l) => el('div', { class: 'sub', style: 'padding:2px 0' }, l)), !s.log.length ? el('p', { class: 'note' }, 'Nothing yet.') : null),
-        el('div', { class: 'sec' }, btn('Start a new restaurant', () => this.game.confirmReset(), 'small plain', false, { title: 'Start a new restaurant', lines: ['This deletes your restaurant, guest book and recipes on this device.'] })),
+        this.game.practice ? null : el('div', { class: 'sec' }, btn('Start a new restaurant', () => this.game.confirmReset(), 'small plain', false, { title: 'Start a new restaurant', lines: ['This deletes your restaurant, guest book and recipes on this device.'] })),
+      ];
+    }
+
+    // How To Play: everything in short, for anyone who skipped the practice kitchen or forgot it.
+    howto() {
+      const g = this.game;
+      const CFG = WW.CFG;
+      const item = (pic, title, ...lines) => el('div', { class: 'row' }, el('div', { class: 'spr' }, pic), el('div', { class: 'grow' }, el('div', { class: 'title' }, title), lines.map((l) => el('div', { class: 'sub' }, l))));
+      const station = (type) => img(WW.stationCanvas(type, false, 0), '', STATION_INFO[type].n);
+      return [
+        this.head('How To Play'),
+        el('p', { class: 'note' }, 'Your restaurant moves with a real hamster on a real wheel. Nothing here can wake him or ask him to run.'),
+        g.practice ? null : el('div', { style: 'margin:8px 0' }, btn('Open the practice kitchen', () => g.startPractice(), 'lilac', false, { title: 'Practice kitchen', lines: ['A step by step lesson with a pretend hamster. Your restaurant is safe and keeps going without you.'] })),
+        el(
+          'div',
+          { class: 'sec' },
+          el('h3', null, 'The hamster'),
+          item(icon('wheel'), 'When he runs', `Every ${CFG.WORK_PER_GUEST} wheel passes bring a guest. Woks fire and staff get tired.`),
+          item(icon('moon'), 'When he sleeps', 'No guests come in. Pots simmer, you earn 1 Wink each round and staff get their energy back.'),
+          item(icon('star'), 'When he wakes', `After ${CFG.DREAM_ROUNDS / 6} hours of sleep you get a Dream Dish, golden after ${CFG.GOLD_ROUNDS / 6} hours. It costs ${CFG.DREAM_DISH_COST} Winks to cook.`)
+        ),
+        el(
+          'div',
+          { class: 'sec' },
+          el('h3', null, 'Cooking'),
+          item(station('stove'), STATION_INFO.stove.n, STATION_INFO.stove.clock),
+          item(station('wok'), STATION_INFO.wok.n, STATION_INFO.wok.clock),
+          item(station('pot'), STATION_INFO.pot.n, STATION_INFO.pot.clock),
+          el('p', { class: 'note', style: 'margin-top:6px' }, 'Guests can only eat what is on the counter. Food never spoils, so cook ahead before you leave.')
+        ),
+        el(
+          'div',
+          { class: 'sec' },
+          el('h3', null, 'Running the place'),
+          item(icon('cash'), 'Money', 'Selling food is your main income. Guests pay into the till, and the till is banked each time a round settles, every 10 minutes.'),
+          item(icon('chair'), 'Seats', `Each seat that touches a table feeds ${CFG.TURNS_PER_ROUND} guests a round. More seats and a bigger room catch more guests.`),
+          item(icon('staff'), 'Staff', 'Sous chefs run more stations. Waiters tire during service, and a lunchbox perks them up.'),
+          item(icon('expand'), 'Decor', 'Nice things raise your rating, and that raises tips. Yard pieces and your building add charm, and charm draws more guests.')
+        ),
+        el(
+          'div',
+          { class: 'sec' },
+          el('h3', null, 'Outside'),
+          item(icon('basket'), 'Market', 'Ingredients for sale. Every restaurant has its own stall, and goods change each day.'),
+          item(icon('street'), 'Neighbours', 'Walk over to clean floors for cash, shake trees, taste dishes, trade ingredients and hire their hamsters.'),
+          item(icon('mail'), 'Your shelf and mailbox', 'Hang up ingredients for neighbours to trade. Locked ones ask you first, and the offer waits in your mailbox.'),
+          item(icon('orders'), 'Notice board', 'Three parties a day pay above the menu price. There is also a daily question, with free ingredients for a right answer.')
+        ),
+        el(
+          'div',
+          { class: 'sec' },
+          el('h3', null, 'Getting better'),
+          item(icon('book'), 'Recipes', `Neighbours share one every second level. Find the rest in the Test Kitchen, ${CFG.EXPERIMENT_COST} Winks a try, or buy a hint for ${CFG.HINT_COST} Winks.`),
+          item(icon('paw'), 'Guests', `There are ${WW.ANIMALS.length} kinds of tiny animal to meet. Some only come for a certain dish or piece of decor.`),
+          item(icon('trophy'), 'Leaderboard', 'Restaurants are ranked by level. Connect a wallet to be listed. You only sign a message, which costs nothing and sends no transaction.')
+        ),
       ];
     }
   }

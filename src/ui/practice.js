@@ -1,0 +1,597 @@
+// The practice kitchen: a throwaway restaurant with a pretend hamster, and a coach who walks you through it.
+// It runs on the real rules and the real screens. It is never saved and never reaches the leaderboard, and a real restaurant waits untouched.
+(function (WW) {
+  const { el, img, btn, WORLD } = WW;
+  const E = () => WW.Engine;
+  const OUT = WW.OUTSIDE;
+  const FAST = 60;
+  const SLOW = 10;
+  const ROUND_A_SECOND = 600;
+
+  const first = (selector) => document.querySelector(selector);
+  const panelButton = () => first('#panelinner .row .btn:not([aria-disabled="true"])');
+
+  class Practice {
+    constructor(game) {
+      this.game = game;
+      this.box = document.getElementById('coach');
+      this.ring = document.getElementById('coachring');
+      this.i = -1;
+      this.stepKey = null;
+    }
+
+    // Everything real is put aside first and comes back as it was.
+    begin() {
+      const g = this.game;
+      if (g.s) g.autosave(true);
+      this.real = g.s;
+      this.realFeed = g.feed;
+      this.realQueue = g.queue;
+      g.queue = [];
+      g.endArrange();
+      g.visit = null;
+      g.practice = this;
+      this.feed = new WW.PracticeFeed();
+      g.feed = this.feed;
+      const s = E().newGame(this.feed.now(), this.feed, { name: 'Bean', shop: WW.tr('Practice Kitchen'), fur: 'golden', hat: 'toque' });
+      // An empty counter, so cooking comes first. The prep list and its rewards are for the real thing.
+      s.stock = {};
+      for (const p of WW.PREP) s.prep[p.id] = true;
+      s.cash = 600;
+      Object.assign(s.pantry, { carrot: 12, peas: 12, oats: 30 });
+      s.soundOn = g.sfx.on;
+      g.s = s;
+      document.body.classList.add('practice');
+      this.resetCameras();
+      document.getElementById('overlay').classList.remove('show');
+      g.afterLoad();
+      if (!g.desktop()) g.setPanelOpen(false);
+      this.steps = this.lesson();
+      this.box.hidden = false;
+      this.go(0);
+    }
+    resetCameras() {
+      for (const cam of Object.values(this.game.scene.cams)) {
+        cam.key = null;
+        cam.user = false;
+      }
+    }
+
+    get s() {
+      return this.game.s;
+    }
+    get scene() {
+      return this.game.scene;
+    }
+    station(type) {
+      return this.s.stations.findIndex((st) => st.type === type);
+    }
+    picking(type) {
+      const p = this.game.panels;
+      return p.tab === 'kitchen' && p.sub.station === this.station(type) && this.game.panelVisible();
+    }
+    closeSheet() {
+      if (!this.game.desktop()) this.game.setPanelOpen(false);
+    }
+    stationRect(type) {
+      return { view: 'in', x: WORLD.STATION_X + this.station(type) * WORLD.STATION_W, y: WORLD.STATION_Y - 4, w: WORLD.STATION_W, h: 30 };
+    }
+    hasDish() {
+      return E().inStock(this.s).length > 0;
+    }
+    // Comes back through the door if the player wandered off, or the step was skipped.
+    goTo(view) {
+      const g = this.game;
+      if (g.scene.view !== view || g.visit) g.walkTo(view);
+    }
+    goVisit() {
+      const g = this.game;
+      if (g.visit) return;
+      const lot = g.streetLots()[0];
+      g.visitNeighbour(lot.id);
+    }
+    // How a cooking step points: at the station, then at the Cook button once the dish list is open.
+    cookStep(type, def, extra) {
+      return Object.assign(
+        {
+          view: 'in',
+          todo: () => (this.picking(type) ? `Click Cook next to ${def.n}.` : `Click the ${WW.STATION_INFO[type].n}.`),
+          ring: () => (this.picking(type) ? { el: panelButton() } : this.stationRect(type)),
+          done: () => this.s.flags['cooked_' + type],
+          skip: true,
+        },
+        extra
+      );
+    }
+
+    lesson() {
+      const g = this.game;
+      const CFG = WW.CFG;
+      const f = this.feed;
+      const stove = WW.DISH.carrot_coins;
+      const wok = WW.DISH.tossed_peas;
+      const pot = WW.DISH.oat_porridge;
+      const dreamHours = CFG.DREAM_ROUNDS / 6;
+      const goldHours = CFG.GOLD_ROUNDS / 6;
+      return [
+        {
+          id: 'wheel',
+          title: 'Meet Squeektoshi',
+          body: 'He is a real hamster on a real wheel, and your restaurant moves with him. In this practice kitchen he is only pretending, so everything can happen quickly. Right now he is asleep.',
+          view: 'in',
+          ring: () => ({ view: 'in', x: 2, y: 6, w: 44, h: 50 }),
+          next: true,
+        },
+        this.cookStep('stove', stove, {
+          id: 'stove',
+          title: 'Cook first',
+          body: 'Guests can only eat what is on the counter, and yours is empty. The stove runs on plain time, whatever he is doing.',
+          enter: () => f.setRate(FAST),
+        }),
+        {
+          id: 'stoveWait',
+          title: 'Your chef is on it',
+          body: `This batch takes ${stove.need} minutes in the real game. Time runs fast in practice, so keep an eye on the counter. Food never spoils, so you can cook ahead before you leave.`,
+          view: 'in',
+          enter: () => this.closeSheet(),
+          ring: () => this.stationRect('stove'),
+          done: () => this.hasDish(),
+          skip: true,
+        },
+        {
+          id: 'run',
+          title: 'He wakes up',
+          body: 'The real Squeektoshi runs when he feels like it, and nobody can make him. Just this once, the button is yours.',
+          view: 'in',
+          enter: () => {
+            this.closeSheet();
+            f.setRate(SLOW);
+          },
+          action: ['Make him run', () => f.run(), 'tomato'],
+          done: () => f.running,
+        },
+        {
+          id: 'guests',
+          title: 'Guests walk in',
+          body: `Every ${CFG.WORK_PER_GUEST} passes of the wheel bring one guest. They sit down, eat what is on the counter and pay. Each seat feeds ${CFG.TURNS_PER_ROUND} guests a round, and a round lasts 10 minutes.`,
+          view: 'in',
+          enter: () => {
+            f.running || f.run();
+            if (!this.hasDish()) this.s.stock.carrot_coins = 20;
+            this.servedAt = this.s.stats.served;
+          },
+          done: () => this.s.stats.served >= this.servedAt + 4 && this.scene.guests.some((x) => x.state === 'eat' || x.state === 'leave'),
+          skip: true,
+        },
+        {
+          id: 'till',
+          title: 'The till',
+          body: 'What guests pay goes into the till first. That is the plus number next to your cash. It is banked each time a round settles.',
+          ring: () => ({ el: first('#statCash') }),
+          enter: () => (this.cashAt = this.s.cash),
+          action: ['End this round', () => f.finishRound(), 'tomato'],
+          done: () => this.s.cash > this.cashAt,
+          skip: true,
+        },
+        this.cookStep('wok', wok, {
+          id: 'wok',
+          title: 'The wok runs on his legs',
+          body: 'The wok only cooks on wheel passes. It fires while he runs and waits while he sleeps.',
+        }),
+        {
+          id: 'wokWait',
+          title: 'Pass by pass',
+          body: `A batch of ${wok.n} takes ${wok.need} passes in the real game, about ${Math.round(wok.need / 70)} minutes of running. This one is shorter. It is plated when the round settles.`,
+          view: 'in',
+          enter: () => {
+            this.closeSheet();
+            const job = this.s.stations[this.station('wok')].job;
+            if (job) job.need = Math.min(job.need, 30);
+            this.wokEnded = false;
+          },
+          ring: () => this.stationRect('wok'),
+          every: () => {
+            const st = this.s.stations[this.station('wok')];
+            if (st.job && !this.wokEnded && E().stationProgress(this.s, st, f, f.now()) >= 1) {
+              this.wokEnded = true;
+              f.finishRound();
+            }
+          },
+          done: () => !this.s.stations[this.station('wok')].job,
+          skip: true,
+        },
+        {
+          id: 'line',
+          title: 'On the Line',
+          body: 'While he runs, this button opens a quick game. The carousel moves one step on every real wheel pass, and serving dishes off it earns extra tips. Try it if you like.',
+          line: true,
+          enter: () => {
+            f.running || f.run();
+            if (!this.hasDish()) this.s.stock.carrot_coins = 20;
+          },
+          ring: () => ({ el: first('#cta .btn.tomato') }),
+          next: true,
+        },
+        this.cookStep('pot', pot, {
+          id: 'pot',
+          title: 'The pot is the opposite',
+          body: 'The pot simmers only while he is not running. Load it now and it waits for him to rest.',
+        }),
+        {
+          id: 'sleep',
+          title: 'Bedtime',
+          body: 'When he stops, the restaurant goes quiet and no guests come in. That is normal. He is off the wheel most of the day.',
+          view: 'in',
+          enter: () => this.closeSheet(),
+          action: ['Let him sleep', () => { f.sleep(); f.setRate(ROUND_A_SECOND); }, 'lilac'],
+          done: () => !f.running,
+        },
+        {
+          id: 'night',
+          title: 'While he sleeps',
+          body: 'Each quiet round earns 1 Wink, your staff get their energy back and the pot simmers. Watch your Winks go up.',
+          ring: () => ({ el: first('#statWink') }),
+          enter: () => {
+            if (f.running) {
+              f.sleep();
+              f.setRate(ROUND_A_SECOND);
+            }
+            this.nightAt = performance.now();
+          },
+          done: () => !this.s.stations[this.station('pot')].job && performance.now() - this.nightAt > 5000,
+          skip: true,
+        },
+        {
+          id: 'dream',
+          title: 'A long sleep brings a dream',
+          body: `After ${dreamHours} hours of sleep he wakes up with a Dream Dish, the same for every player. It costs ${CFG.DREAM_DISH_COST} Winks to cook, and legendary guests only come for dream dishes. After ${goldHours} hours the dream is golden.`,
+          action: [
+            'Skip to the morning',
+            () => {
+              f.setRate(FAST);
+              f.jump(Math.max(2, CFG.DREAM_ROUNDS + 2 - this.s.clock.streak) * WW.ROUND_MS);
+              f.run();
+              this.wokeAt = performance.now();
+              this.dreamSet = false;
+              this.step.acted = true;
+              this.stepKey = null;
+            },
+            'lilac',
+          ],
+          every: () => {
+            if (this.wokeAt && !this.dreamSet && performance.now() - this.wokeAt > 1200) {
+              this.dreamSet = true;
+              f.finishRound();
+            }
+          },
+          done: () => !!this.s.dreamDish && !g.queue.length && !document.getElementById('overlay').classList.contains('show'),
+        },
+        {
+          id: 'door',
+          title: 'Step outside',
+          body: 'Your door leads out to the market, the decor shop and the neighbours.',
+          enter: () => {
+            this.closeSheet();
+            f.setRate(SLOW);
+            f.running || f.run();
+          },
+          todo: () => 'Click the Go outside button.',
+          ring: () => (this.scene.view === 'in' ? { el: first('#btnDoor') } : null),
+          done: () => this.scene.view === 'out' && !this.scene.fading,
+          skip: true,
+        },
+        {
+          id: 'tree',
+          title: 'Shake the tree',
+          body: 'You get three shakes a day. Cash falls out, and now and then something odd.',
+          view: 'out',
+          enter: () => this.goTo('out'),
+          todo: () => 'Click the tree.',
+          ring: () => ({ view: 'out', x: OUT.TREE.x, y: OUT.TREE.y, w: OUT.TREE.w, h: OUT.TREE.h }),
+          done: () => this.s.flags.tree,
+          skip: true,
+        },
+        {
+          id: 'market',
+          title: 'The market',
+          body: 'Ingredients come from here. Every restaurant has its own stall, the goods change each day, and better things are scarce.',
+          view: 'out',
+          enter: () => this.goTo('out'),
+          todo: () => (g.panels.tab === 'market' && g.panelVisible() ? 'Click +1 to buy something.' : 'Click the market.'),
+          ring: () => (g.panels.tab === 'market' && g.panelVisible() ? { el: panelButton() } : { view: 'out', x: OUT.MARKET.x, y: OUT.MARKET.y, w: OUT.MARKET.w, h: OUT.MARKET.h }),
+          done: () => this.s.flags.bought,
+          skip: true,
+        },
+        {
+          id: 'board',
+          title: 'The notice board',
+          body: 'Three parties book in each day and pay above the menu price. There is also a daily question, with free ingredients for a right answer.',
+          view: 'out',
+          enter: () => {
+            this.closeSheet();
+            this.goTo('out');
+          },
+          ring: () => ({ view: 'out', x: OUT.BOARD.x, y: OUT.BOARD.y, w: OUT.BOARD.w, h: OUT.BOARD.h }),
+          next: true,
+        },
+        {
+          id: 'shop',
+          title: 'The decor shop',
+          body: 'Tables and chairs give you more seats. Nice things raise your rating, and that raises tips. Yard pieces and a new look for your building add charm, and charm draws more guests.',
+          view: 'out',
+          enter: () => {
+            this.closeSheet();
+            this.goTo('out');
+          },
+          ring: () => ({ view: 'out', x: OUT.SHOP.x, y: OUT.SHOP.y, w: OUT.SHOP.w, h: OUT.SHOP.h }),
+          next: true,
+        },
+        {
+          id: 'ranks',
+          title: 'The leaderboard',
+          body: 'Restaurants are ranked by level. Only restaurants with a connected wallet are listed, and connecting costs nothing.',
+          view: 'out',
+          enter: () => {
+            this.closeSheet();
+            this.goTo('out');
+          },
+          ring: () => ({ view: 'out', x: OUT.RANKS.x, y: OUT.RANKS.y, w: OUT.RANKS.w, h: OUT.RANKS.h }),
+          next: true,
+        },
+        {
+          id: 'street',
+          title: 'Your neighbours',
+          body: `The signpost leads to Skirting Street, where five neighbours live. You can walk to another street ${WW.STREET.MOVES} times a day.`,
+          view: 'out',
+          enter: () => {
+            this.closeSheet();
+            this.goTo('out');
+          },
+          todo: () => 'Click the signpost.',
+          ring: () => ({ view: 'out', x: OUT.GATE.x, y: OUT.GATE.y, w: OUT.GATE.w, h: OUT.GATE.h }),
+          done: () => this.scene.view === 'street' && !this.scene.fading,
+          skip: true,
+        },
+        {
+          id: 'house',
+          title: 'Knock on a door',
+          body: 'Any of these houses can be visited, and your first visit earns a welcome gift.',
+          todo: () => (this.scene.view === 'street' ? 'Click a house.' : this.scene.view === 'out' ? 'Click the signpost.' : `Click the ${g.doorPlace().text} button.`),
+          ring: () => {
+            if (this.scene.view === 'in') return { el: first('#btnDoor') };
+            if (this.scene.view === 'out') return { view: 'out', x: OUT.GATE.x, y: OUT.GATE.y, w: OUT.GATE.w, h: OUT.GATE.h };
+            const lot = g.streetLots()[0];
+            return Object.assign({ view: 'street' }, this.scene.lotHouse(lot).rect);
+          },
+          done: () => !!g.visit && !this.scene.fading,
+          skip: true,
+        },
+        {
+          id: 'clean',
+          title: 'Help out',
+          body: 'Cleaning a neighbour\'s floor pays cash, up to six spots a day.',
+          enter: () => {
+            this.goVisit();
+            this.closeSheet();
+          },
+          todo: () => 'Click a dirty spot on the floor.',
+          ring: () => {
+            // The spot furthest from the coach.
+            const d = g.visit && this.scene.dirt.slice().sort((a, b) => a.y - b.y)[0];
+            return d ? { view: 'in', x: d.x - 7, y: d.y - 6, w: 14, h: 11 } : null;
+          },
+          done: () => this.s.flags.cleanedForFriend,
+          skip: true,
+        },
+        {
+          id: 'trade',
+          title: 'Trade and hire',
+          body: 'Here you can also taste a dish, trade ingredients and hire their hamster. A trade needs the same level or better, shown as L1 to L4. What your stall lacks, a neighbour may have.',
+          enter: () => {
+            this.goVisit();
+            g.panels.open('street', { view: 'here' });
+          },
+          next: true,
+          leave: () => {
+            this.closeSheet();
+            if (g.visit) g.walkTo('in');
+          },
+        },
+        {
+          id: 'arrange',
+          title: 'Arrange your room',
+          body: 'This button moves your furniture and places things from your bag, inside and outside. Your bag is in the Kitchen.',
+          enter: () => {
+            this.closeSheet();
+            this.goTo('in');
+          },
+          ring: () => ({ el: first('#btnArrange') }),
+          next: true,
+        },
+        {
+          id: 'recipes',
+          title: 'New recipes',
+          body: `Neighbours share a recipe every second level. The rest you find in the Test Kitchen: pick up to three ingredients and taste them, for ${CFG.EXPERIMENT_COST} Winks a try.`,
+          ring: () => ({ el: first('.tab[data-tab="recipes"]') }),
+          next: true,
+        },
+        {
+          id: 'howto',
+          title: 'If you forget',
+          body: 'How To Play has all of this in short, and it can bring you back to this practice kitchen at any time.',
+          enter: () => this.closeSheet(),
+          ring: () => ({ el: first('.tab[data-tab="howto"]') }),
+          next: true,
+          nextLabel: 'Finish',
+        },
+      ];
+    }
+
+    get step() {
+      return this.steps[this.i];
+    }
+    go(i) {
+      const before = this.step;
+      if (before && before.leave) before.leave();
+      this.i = i;
+      if (i >= this.steps.length) return this.finishCard();
+      this.stepKey = null;
+      this.lookedAt = null;
+      const step = this.step;
+      if (step.enter) step.enter();
+      this.game.ctaKey = null;
+      this.game.updateCta();
+      this.draw();
+      this.place();
+    }
+    next() {
+      this.game.sound('tap');
+      this.go(this.i + 1);
+    }
+    // A step can be off in the wrong place. The coach then says how to get back.
+    astray() {
+      const step = this.step;
+      if (!step || !step.view || this.scene.fading || (step.done && step.done())) return false;
+      if (this.game.visit) return !step.visit;
+      return this.scene.view !== step.view;
+    }
+    // On a phone a sheet can cover the map. The coach then says how to close it.
+    sheetInWay() {
+      const step = this.step;
+      const g = this.game;
+      if (g.desktop() || !g.panelOpen || !step || !step.ring) return false;
+      const aim = step.ring();
+      return !!aim && !aim.el;
+    }
+    todoText() {
+      const step = this.step;
+      if (this.sheetInWay()) return 'Click Close to see the map.';
+      if (this.astray()) return `Click the ${this.game.doorPlace().text} button.`;
+      return step.todo ? step.todo() : null;
+    }
+    draw() {
+      const step = this.step;
+      if (!step) return;
+      const todo = this.todoText();
+      const key = JSON.stringify([this.i, todo]);
+      if (key === this.stepKey) return;
+      this.stepKey = key;
+      const g = this.game;
+      const said = todo ? (g.hasMouse ? todo : todo.replace(/^Click /, 'Tap ')) : null;
+      const actions = [];
+      if (step.action && !step.acted) actions.push(btn(step.action[0], () => { g.sound('tap'); step.action[1](); this.draw(); }, step.action[2] + ' small'));
+      if (step.next) actions.push(btn(step.nextLabel || 'Next', () => this.next(), 'tomato small'));
+      const percent = Math.round((this.i / this.steps.length) * 100);
+      const parts = [
+        el('div', { class: 'coachhead' }, img(WW.hamsterPose({ fur: 'golden', hat: 'toque', job: 'chef' }, 0), '', ''), el('b', null, step.title), el('button', { class: 'coachskip', type: 'button', on: { click: () => this.finishNow() } }, 'Skip practice')),
+        el('div', { class: 'coachbar' }, el('i', { style: `width:${percent}%` })),
+        el('p', null, step.body),
+        said ? el('p', { class: 'coachtodo' }, said) : null,
+        actions.length || step.skip ? el('div', { class: 'coachactions' }, step.skip ? el('button', { class: 'coachskip', type: 'button', on: { click: () => this.next() } }, 'Skip this step') : null, actions) : null,
+      ];
+      this.box.replaceChildren(...parts.filter(Boolean));
+    }
+    // Every quarter second: has the player done it yet.
+    tick() {
+      const step = this.step;
+      if (!step) return;
+      if (step.every) step.every();
+      if (step.done && step.done()) return this.go(this.i + 1);
+      this.draw();
+    }
+    // Every frame: the ring stays on its target, wherever the camera or the page has moved it.
+    place() {
+      const step = this.step;
+      const g = this.game;
+      if (!step || this.box.hidden) return;
+      this.box.classList.toggle('top', !g.desktop() && g.panelOpen);
+      let aim = null;
+      if (step.done && step.done()) aim = null;
+      else if (this.sheetInWay()) aim = { el: first('#closepanel') };
+      else if (this.astray()) aim = { el: first('#btnDoor') };
+      else if (step.ring) aim = step.ring();
+      let box = null;
+      if (aim && aim.el) {
+        const r = aim.el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) box = r;
+      } else if (aim && aim.view === this.scene.view && !this.scene.fading) {
+        // Off screen targets are brought into view once. After that the player may drag the map freely.
+        const key = this.i + ':' + aim.x + ',' + aim.y;
+        if (this.lookedAt !== key) {
+          this.lookedAt = key;
+          this.scene.lookAt(aim);
+          // On a small screen the coach can cover the lower part of the map. What he points at moves clear of him.
+          if (!this.box.classList.contains('top')) {
+            const over = this.scene.screenRect(aim);
+            const coach = this.box.getBoundingClientRect();
+            const across = over.left < coach.right && over.left + over.width > coach.left;
+            const under = over.top + over.height + 8 - coach.top;
+            if (across && under > 0) this.scene.panBy(0, -under);
+          }
+        }
+        box = this.scene.screenRect(aim);
+      }
+      const hide = !box || document.getElementById('overlay').classList.contains('show');
+      this.ring.hidden = hide;
+      if (hide) return;
+      // All of it stays on the page, even around something at the very edge.
+      const pad = 4;
+      const edge = 10;
+      const left = Math.max(edge, box.left - pad);
+      const top = Math.max(edge, box.top - pad);
+      const right = Math.min(window.innerWidth - edge, box.left + box.width + pad);
+      const bottom = Math.min(window.innerHeight - edge, box.top + box.height + pad);
+      Object.assign(this.ring.style, { left: Math.round(left) + 'px', top: Math.round(top) + 'px', width: Math.round(right - left) + 'px', height: Math.round(bottom - top) + 'px' });
+    }
+
+    finishCard() {
+      const g = this.game;
+      this.box.hidden = true;
+      this.ring.hidden = true;
+      g.showTicket(
+        el('h2', null, 'That is the whole kitchen'),
+        el('p', null, this.real ? 'Your own restaurant has been running with the real Squeektoshi all along.' : 'From now on everything follows the real Squeektoshi. He may be asleep when you open, and that is fine. Cook ahead, because food never spoils, and guests come when he runs.'),
+        el('p', { class: 'note', style: 'margin-top:6px' }, 'How To Play has all of this in short.'),
+        g.actions(btn(this.real ? 'Back to my restaurant' : 'Name my restaurant', () => this.finishNow(), 'tomato'))
+      );
+    }
+    // The practice kitchen is thrown away here, and what was real comes back.
+    finishNow() {
+      const g = this.game;
+      g.sound('tap');
+      g.hideTip();
+      this.steps = [];
+      this.box.hidden = true;
+      this.ring.hidden = true;
+      document.body.classList.remove('practice');
+      if (g.linegame.active) {
+        g.linegame.active = false;
+        g.linegame.root.classList.remove('show');
+      }
+      document.getElementById('overlay').classList.remove('show');
+      document.getElementById('toasts').replaceChildren();
+      g.practice = null;
+      g.visit = null;
+      g.queue = this.realQueue;
+      g.scene.editing = null;
+      g.scene.fading = null;
+      g.scene.reset();
+      this.resetCameras();
+      g.ctaKey = null;
+      g.dockKey = null;
+      g.s = this.real;
+      g.feed = this.realFeed;
+      if (g.liveFeed && g.feed !== g.liveFeed) g.useLive(g.liveFeed);
+      if (g.s) {
+        g.s.soundOn = g.sfx.on;
+        g.afterLoad();
+        g.pumpQueue();
+      } else {
+        g.landing.show(true);
+        g.showIntro();
+      }
+    }
+  }
+
+  WW.Practice = Practice;
+})((globalThis.WW = globalThis.WW || {}));

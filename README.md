@@ -48,6 +48,12 @@ You can hang your own ingredients on a shelf. Unlocked goods swap on their own w
 
 Trees and floors always pay cash, with a small chance of an ingredient, a bit of junk or a treasure.
 
+## The way in
+
+The landing page comes first on every visit: the name, drawn by hand in `src/art/logo.js`, the game's own woods at the real hour, with your restaurant in them when you have one, and two ways in, with a wallet or without. The restaurant stands still behind it. Disconnecting a wallet comes back here.
+
+Anyone with no restaurant is offered the practice kitchen before naming one, and can skip it. It is a throwaway save on the real rules and the real screens, run by `PracticeFeed`, a pretend hamster the lesson tells when to run and sleep and how fast time goes. A coach (`src/ui/practice.js`) walks through 26 steps and a ring marks what to press. Nothing there is saved or sent to the board, and a real restaurant is put aside and comes back as it was. How To Play, the sixth tab, has everything in short and can open the practice kitchen again.
+
 ## The leaderboard and wallets
 
 The board lists only restaurants whose owner connected a wallet, ranked by restaurant level, then progress toward the next one, then who got there first. Nothing else is on it, so an empty board is simply empty. A wallet keeps its best restaurant, so starting again takes nobody off the board.
@@ -91,10 +97,10 @@ The board needs a Postgres database, its address in the `DATABASE_URL` setting o
 
 ## Layout
 
-- `src/core`: rules (`engine.js`), data sources (`feed.js`), the wallet and the board (`wallet.js`), seeded random numbers.
+- `src/core`: rules (`engine.js`), data sources including the practice kitchen's pretend hamster (`feed.js`), the wallet and the board (`wallet.js`), seeded random numbers.
 - `src/data`: guests, food, decor, the world outside with its seasons and weather, the recording.
 - `src/art`: pixel painters, nothing is an image file. `houses.js` paints every building part.
-- `src/ui`: the canvas world with its three places and camera, panels, the carousel game, sound and music, start up.
+- `src/ui`: the landing page, the canvas world with its three places and camera, panels, the carousel game, the practice kitchen, sound and music, start up.
 - `src/lang`: the Vietnamese test build, left out of the plain build.
 - `server`, `api`: the leaderboard's server, sign in and the rules for a score.
 

@@ -434,8 +434,135 @@
     }
   }
 
+  // The practice kitchen's pretend hamster. The lesson says when he runs, when he sleeps and how fast time goes.
+  // He never touches the real wheel, and the rules of the game cannot tell him from the real one.
+  const PRACTICE_PASSES_A_SECOND = 5;
+  const PRACTICE_LINE_PASSES_A_SECOND = 1.25;
+  class PracticeFeed {
+    constructor(realNow = () => Date.now()) {
+      this.mode = 'practice';
+      this.real = realNow;
+      const start = this.real();
+      this.genesisMs = Math.floor(start / ROUND_MS) * ROUND_MS - 5000 * ROUND_MS;
+      this.virtual = start;
+      this.since = start;
+      this.rate = 1;
+      this.running = false;
+      // Guests eat and the room empties on this clock, so a seat turns over in seconds and not minutes.
+      this.pace = 30;
+      this.mmPerPass = 878;
+      this.offset = 0;
+      this.stoppedAt = start - 40 * ROUND_MS;
+      this.segments = [{ t: 0, cum: 0, perMs: 0 }];
+      // One hash for every round, picked so his dream is one the practice pantry can cook.
+      let n = 0;
+      while (WW.hash32('practice' + n, 'dream') % WW.DREAMS.length !== 0) n++;
+      this.hash = 'practice' + n;
+    }
+    now() {
+      return this.virtual + (this.real() - this.since) * this.rate;
+    }
+    anchor() {
+      const t = this.now();
+      this.virtual = t;
+      this.since = this.real();
+      return t;
+    }
+    cumAt(t) {
+      for (let i = this.segments.length - 1; i >= 0; i--) {
+        const seg = this.segments[i];
+        if (seg.t <= t) return seg.cum + (t - seg.t) * seg.perMs;
+      }
+      return 0;
+    }
+    // Passes come at the same speed on screen however fast the lesson runs time.
+    flow(t) {
+      this.segments.push({ t, cum: this.cumAt(t), perMs: this.running ? PRACTICE_PASSES_A_SECOND / 1000 / this.rate : 0 });
+    }
+    setRate(rate) {
+      const t = this.anchor();
+      this.rate = rate;
+      this.flow(t);
+    }
+    run() {
+      const t = this.anchor();
+      this.running = true;
+      this.flow(t);
+    }
+    sleep() {
+      const t = this.anchor();
+      this.running = false;
+      this.stoppedAt = t;
+      this.flow(t);
+    }
+    // Time jumps forward and he does nothing during the jump, so no pile of guests arrives at once.
+    jump(ms) {
+      const t = this.anchor();
+      const cum = this.cumAt(t);
+      this.segments.push({ t, cum, perMs: 0 });
+      this.virtual = t + ms;
+      this.segments.push({ t: t + ms, cum, perMs: this.running ? PRACTICE_PASSES_A_SECOND / 1000 / this.rate : 0 });
+    }
+    finishRound() {
+      const t = this.now();
+      this.jump(this.roundEnd(this.roundAt(t)) + SETTLE_LAG_MS + 50 - t);
+    }
+    roundAt(t) {
+      return Math.floor((t - this.genesisMs) / ROUND_MS) + 1;
+    }
+    roundEnd(r) {
+      return this.genesisMs + r * ROUND_MS;
+    }
+    settled(t) {
+      return Math.floor((t - this.genesisMs - SETTLE_LAG_MS) / ROUND_MS);
+    }
+    round(r) {
+      const before = Math.floor(this.cumAt(this.roundEnd(r - 1)));
+      const after = Math.floor(this.cumAt(this.roundEnd(r)));
+      return { r, work: after - before, cum: after, hash: after > before ? this.hash : null, unknown: false };
+    }
+    hashBefore() {
+      return this.hash;
+    }
+    workBetween(r0, r1) {
+      return Math.floor(this.cumAt(this.roundEnd(r1))) - Math.floor(this.cumAt(this.roundEnd(r0 - 1)));
+    }
+    live(t) {
+      const ago = this.running ? 0 : t - this.stoppedAt;
+      return {
+        state: this.running ? 'running' : ago < QUIET_AFTER_MS ? 'breather' : 'quiet',
+        rpm: this.running ? 72 : 0,
+        cum: Math.floor(this.cumAt(t)),
+        agoMs: ago,
+        round: this.roundAt(t),
+      };
+    }
+    // The carousel turns at his real speed, so the quick game feels the way it really does.
+    passesBetween(t0, t1) {
+      if (!this.running) return 0;
+      const k = PRACTICE_LINE_PASSES_A_SECOND / 1000 / this.rate;
+      return Math.floor(t1 * k) - Math.floor(t0 * k);
+    }
+    lastSession() {
+      return null;
+    }
+    sessionPasses() {
+      return [];
+    }
+    nextChange(t) {
+      return t;
+    }
+    nextWake(t) {
+      return t;
+    }
+    describe() {
+      return 'A pretend hamster for the practice kitchen. Nothing here counts.';
+    }
+  }
+
   WW.RecordingFeed = RecordingFeed;
   WW.LiveFeed = LiveFeed;
   WW.HeldFeed = HeldFeed;
+  WW.PracticeFeed = PracticeFeed;
   WW.ROUND_MS = ROUND_MS;
 })((globalThis.WW = globalThis.WW || {}));

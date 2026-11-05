@@ -3,7 +3,6 @@
   const { C, WORLD, el, img, btn, fmt, money } = WW;
   const E = WW.Engine;
   const SAVE_KEY = 'squeekerant-save-v2';
-  const OLD_SAVE_KEY = 'wheel-and-whisk-save-v1';
   const DRAG_PX = 6;
   const HOLD_MS = 420;
   const AWAKE_MS = 20 * 60000;
@@ -17,6 +16,7 @@
       this.music = new WW.Music(this.sfx);
       this.s = null;
       this.visit = null;
+      this.practice = null;
       this.live = { state: 'quiet', rpm: 0, cum: 0, agoMs: 1e9 };
       this.panelOpen = false;
       this.queue = [];
@@ -108,6 +108,7 @@
       this.dockKey = null;
       if (this.s && this.panels && this.panels.tab === 'street' && this.panels.streetView() === 'board') this.panels.render();
       if (this.walletTicket) this.showWallet();
+      if (this.landing && this.landing.open) this.landing.draw();
     }
     closeWallet() {
       this.walletWait = null;
@@ -141,6 +142,7 @@
               w.disconnect();
               close();
               this.toast('Wallet disconnected. Your place on the board stays.');
+              this.landing.show();
             }, 'plain'),
             btn('Close', close, 'tomato')
           )
@@ -174,8 +176,9 @@
           this.walletWait = null;
           this.walletTicket = null;
           this.closeOverlay();
-          this.toast(this.feed.mode === 'live' ? 'Wallet connected. Your restaurant is on the leaderboard.' : 'Wallet connected. Your restaurant joins the leaderboard as soon as it is on the real wheel.', 'good');
+          this.toast(this.s && this.feed.mode === 'live' ? 'Wallet connected. Your restaurant is on the leaderboard.' : 'Wallet connected. Your restaurant joins the leaderboard as soon as it is on the real wheel.', 'good');
           this.walletChanged();
+          if (this.landing.open) this.landing.enter();
         } catch (e) {
           this.walletWait = null;
           if (this.walletTicket === 'list') this.showWallet();
@@ -207,7 +210,7 @@
     // One tune for each place, and silence while the tab is away, on the Line, or with sound off.
     updateMusic() {
       if (!this.music) return;
-      const quiet = !this.s || !this.sfx.on || document.hidden || (this.linegame && this.linegame.active);
+      const quiet = !this.s || !this.sfx.on || document.hidden || (this.linegame && this.linegame.active) || (this.landing && this.landing.open);
       this.music.play(quiet ? null : this.scene.view);
     }
     desktop() {
@@ -221,12 +224,14 @@
       this.scene = new WW.Scene(document.getElementById('world'), this);
       this.panels = new WW.Panels(this);
       this.linegame = new WW.Line(this);
+      this.landing = new WW.Landing(this);
       window.addEventListener('resize', () => this.fit());
       this.fit();
 
+      this.landing.show();
       const saved = (data && data.save) || this.loadLocal();
       if (saved) this.useSave(saved);
-      else this.showIntro();
+      this.landing.draw();
       this.connectLive();
       this.connectCloud();
       this.last = performance.now();
@@ -253,7 +258,8 @@
 
     useSave(save) {
       const migrated = E.migrate(save);
-      if (migrated.v !== 6) return this.showIntro();
+      // A save from a version too old to carry forward counts as no save.
+      if (migrated.v !== 6) return;
       this.s = migrated;
       // A save on the real wheel waits for it. The recording must never be counted into it.
       if (migrated.feedMode === 'live' && !window.claude) this.feed = this.liveFeed || new WW.HeldFeed(WW.RECORDING, migrated.clock);
@@ -289,6 +295,7 @@
         ['staff', 'Staff', 'staff', 'Your hamster, sous chefs, waiters and cleaners.'],
         ['guests', 'Guests', 'paw', 'Every tiny animal you have met, and the ones you haven\'t.'],
         ['diary', 'Diary', 'diary', 'Prep list, the critic, trophies and dreams.'],
+        ['howto', 'How To Play', 'help', 'How everything works in short, and the practice kitchen again.'],
       ];
       const nav = document.getElementById('tabs');
       nav.replaceChildren(...tabs.map(([id, label, ic, tip]) => el('button', { class: 'tab', type: 'button', 'data-tab': id, tip: { title: label, lines: [tip] }, on: { click: () => this.tabClick(id) } }, img(WW.iconCanvas(ic), '', ''), label)));
@@ -329,7 +336,7 @@
       tipOf('statLevel', () => (this.s ? { title: `Restaurant level ${this.s.level}`, lines: [`${fmt(this.s.xp)} of ${fmt(E.xpNeed(this.s.level))} toward the next level.`, 'Guests, orders and upgrades all count.'] } : null));
       tipOf('btnSound', { title: 'Music and sound', lines: ['Turn music and sound on or off.'] });
       tipOf('btnWallet', () => ({ icon: WW.iconCanvas('wallet'), title: 'Wallet', lines: this.wallet.connected() ? [this.wallet.address, 'Click for your place on the leaderboard.'] : ['Connect a wallet to put your restaurant on the leaderboard.', 'You only sign a message. It costs nothing and sends no transaction.'] }));
-      tipOf('ribbon', () => ({ title: 'The Wheel', lines: [this.feed.mode === 'recording' ? 'A replay of his real rounds, because the real wheel cannot be reached right now.' : 'What he is doing right now. Click for the numbers.'] }));
+      tipOf('ribbon', () => ({ title: 'The Wheel', lines: [this.feed.mode === 'practice' ? 'A pretend hamster for the practice kitchen. Nothing here counts.' : this.feed.mode === 'recording' ? 'A replay of his real rounds, because the real wheel cannot be reached right now.' : 'What he is doing right now. Click for the numbers.'] }));
       tipOf('houseinfo', () => this.houseTip());
       tipOf('skybadge', () => this.skyTip());
       tipOf('btnDoor', () => this.doorTip());
@@ -779,14 +786,17 @@
       try {
         const live = await WW.LiveFeed.connect();
         // Only a save from this same wheel carries on from where it was. Its rounds and count mean nothing on a redeployed one.
-        const resume = this.s && this.s.feedMode === 'live' && this.s.wheelCore === live.core ? this.s.clock.round : null;
+        const mine = this.practice ? this.practice.real : this.s;
+        const resume = mine && mine.feedMode === 'live' && mine.wheelCore === live.core ? mine.clock.round : null;
         // Always far enough back for his last full day, whatever the save needs.
         const back = Math.max(0, live.settledRound - 320);
         await live.syncFrom(resume !== null ? Math.min(resume, back) : back);
         this.liveFeed = live;
-        this.toast('Connected to the real wheel.', 'good');
-        if (resume !== null) this.feed = live;
-        else this.switchFeed(live);
+        // The practice kitchen keeps its pretend hamster. The real wheel takes over when it closes.
+        if (!this.practice) {
+          if (!this.landing.open) this.toast('Connected to the real wheel.', 'good');
+          this.useLive(live);
+        }
         this.reconnecting = false;
         if (!this.polling) {
           this.polling = true;
@@ -799,9 +809,16 @@
         this.connecting = false;
       }
     }
+    // A save from this same wheel carries straight on, anything else moves across and keeps the restaurant.
+    useLive(live) {
+      const s = this.s;
+      if (s && s.feedMode === 'live' && s.wheelCore === live.core) this.feed = live;
+      else this.switchFeed(live);
+    }
     pollLive() {
-      if (this.feed.mode === 'live') {
-        if (!this.feed.replaced) this.feed.poll();
+      const feed = this.practice ? this.liveFeed : this.feed;
+      if (feed && feed.mode === 'live') {
+        if (!feed.replaced) feed.poll();
         else if (!this.reconnecting) {
           this.reconnecting = true;
           this.connectLive();
@@ -826,14 +843,14 @@
 
     loadLocal() {
       try {
-        const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem(OLD_SAVE_KEY);
+        const raw = localStorage.getItem(SAVE_KEY);
         return raw ? JSON.parse(raw) : null;
       } catch (e) {
         return null;
       }
     }
     autosave(force) {
-      if (!this.s || (!this.dirty && !force)) return;
+      if (!this.s || this.practice || (!this.dirty && !force)) return;
       this.dirty = false;
       this.s.savedAt = Date.now();
       this.s.clockOffset = this.feed.mode === 'recording' ? this.feed.offset : 0;
@@ -860,11 +877,15 @@
         this.cloudDoc = db.collection('data/users/' + id).doc('save');
         const snap = await Promise.race([this.cloudDoc.get(), new Promise((res) => setTimeout(() => res(null), 10000))]);
         const data = snap && snap.exists ? snap.data() : null;
-        if (data && data.save && (!this.s || data.at > (this.s.savedAt || 0))) {
+        const mine = this.practice ? this.practice.real : this.s;
+        if (data && data.save && (!mine || data.at > (mine.savedAt || 0))) {
           const remote = JSON.parse(data.save);
+          if (this.practice) this.practice.finishNow();
           if (!this.s) document.getElementById('overlay').classList.remove('show');
           this.visit = null;
           this.useSave(remote);
+          // Whatever first cards were up have gone, so the landing page needs its way in back.
+          if (this.landing.open) this.landing.show();
           this.toast('Your restaurant was restored from your other device.', 'good');
         }
       } catch (e) {
@@ -877,15 +898,22 @@
     frame(ts) {
       const dt = Math.min(0.1, (ts - this.last) / 1000);
       this.last = ts;
-      if (this.s) {
+      if (this.landing.open) this.landing.frame(dt);
+      else if (this.s) {
         if (this.speed > 1 && this.feed.mode === 'recording') this.feed.offset += dt * 1000 * (this.speed - 1);
         this.scene.update(dt);
         this.scene.draw();
+        if (this.practice) this.practice.place();
       }
       requestAnimationFrame((t) => this.frame(t));
     }
 
     tick() {
+      if (this.landing.open) {
+        this.live = this.feed.live(this.now());
+        this.tickN++;
+        return this.landing.tick();
+      }
       this.wallet.tick(this.s, E, this.feed.mode === 'live');
       if (!this.s) return;
       const s = this.s;
@@ -939,6 +967,7 @@
         this.updateCta();
         this.updateDock();
       }
+      if (this.practice) this.practice.tick();
     }
 
     panelVisible() {
@@ -1053,7 +1082,8 @@
       const labels = { running: `RUNNING ${live.rpm} RPM`, breather: 'CATCHING HIS BREATH', quiet: this.quietText().toUpperCase(), unknown: 'NO SIGNAL' };
       const state = WW.tr(this.visit ? `AT ${this.visit.home.shop.toUpperCase()}` : labels[live.state]);
       // A replay must never pass for the real hamster.
-      document.getElementById('ribbonState').textContent = this.feed.mode === 'recording' && !this.visit ? `${WW.tr('REPLAY')} · ${state}` : state;
+      const tag = this.feed.mode === 'practice' ? 'PRACTICE' : this.feed.mode === 'recording' ? 'REPLAY' : null;
+      document.getElementById('ribbonState').textContent = tag && !this.visit ? `${WW.tr(tag)} · ${state}` : state;
       document.getElementById('ribbonDot').style.background = colors[live.state];
       document.getElementById('ribbonRound').textContent = WW.tr(`Round ends ${mm}:${ss}`);
       this.updateHouseInfo();
@@ -1212,6 +1242,10 @@
     updateDock() {
       const dock = document.getElementById('dock');
       if (this.desktop() || this.panelOpen || !this.s) return;
+      if (this.practice) {
+        this.dockKey = null;
+        return dock.replaceChildren();
+      }
       const s = this.s;
       if (this.visit) return this.updateVisitDock(dock);
       if (this.scene.view === 'out') return this.updateOutDock(dock);
@@ -1301,7 +1335,10 @@
         if (this.scene.view === 'street' && !this.desktop()) parts.push(['others', `Another street (${E.streetMovesLeft(s, this.now())} left)`, 'plain']);
         const running = this.live.state === 'running' || (this.live.state === 'breather' && this.live.agoMs < 8000);
         const tipsLeft = E.lineTipsLeft(s, this.now()) > 0;
-        if (running && tipsLeft) parts.push(['live', 'On the Line: he is running!', 'tomato pulse']);
+        if (this.practice) {
+          const step = this.practice.step;
+          if (step && step.line && running && tipsLeft) parts.push(['live', 'On the Line: he is running!', 'tomato pulse']);
+        } else if (running && tipsLeft) parts.push(['live', 'On the Line: he is running!', 'tomato pulse']);
         else if (!running && tipsLeft) {
           const day = E.dayKey(this.now());
           if (s.line.replayDay !== day && this.replayFeed().lastSession(this.now())) parts.push(['replay', 'Replay his last run', 'plain']);
@@ -1676,7 +1713,7 @@
       this.queue.push(fn);
     }
     pumpQueue() {
-      if (document.getElementById('overlay').classList.contains('show')) return;
+      if (this.landing.open || document.getElementById('overlay').classList.contains('show')) return;
       const next = this.queue.shift();
       if (next) next();
     }
@@ -1703,6 +1740,36 @@
       setTimeout(() => n.remove(), 3000);
     }
 
+    // Back to a restaurant from the landing page. Whatever the clock owes is worked out on the next tick.
+    afterLanding() {
+      this.last = performance.now();
+      this.fit();
+      this.updateHud();
+      this.updateMusic();
+      this.pumpQueue();
+    }
+    showWelcome() {
+      this.showTicket(
+        el('h2', null, 'First time here?'),
+        el('p', null, 'Try the practice kitchen. A pretend hamster runs and sleeps when the lesson asks, so you can see how everything works in a few minutes.'),
+        el('p', { class: 'note', style: 'margin-top:6px' }, 'Nothing there counts and nothing is saved.'),
+        this.actions(
+          btn('Skip, I have played before', () => {
+            this.sound('tap');
+            this.showIntro();
+          }, 'plain'),
+          btn('Start practice', () => {
+            this.sound('tap');
+            this.startPractice();
+          }, 'tomato')
+        )
+      );
+    }
+    startPractice() {
+      if (this.landing.open) this.landing.hide();
+      new WW.Practice(this).begin();
+    }
+
     showIntro() {
       const state = { name: 'Bean', shop: WW.tr('The Tiny Table'), fur: 'golden', hat: 'toque' };
       const draw = () => {
@@ -1724,7 +1791,9 @@
     startNew(st) {
       const t = this.now();
       this.s = E.newGame(t, this.feed, { name: st.name.trim() || 'Bean', shop: st.shop.trim() || WW.tr('The Tiny Table'), fur: st.fur, hat: st.hat });
+      this.s.soundOn = this.sfx.on;
       this.dirty = true;
+      if (this.landing.open) this.landing.hide();
       document.getElementById('overlay').classList.remove('show');
       this.sound('wake');
       this.afterLoad();
@@ -1840,9 +1909,9 @@
       this.showTicket(el('h2', null, 'Start over?'), el('p', null, 'This deletes your restaurant, guest book and recipes on this device.'), this.actions(btn('Keep it', () => this.closeOverlay(), 'plain'), btn('Delete and start over', () => this.reset(), 'tomato')));
     }
     reset() {
+      if (this.practice) return;
       try {
         localStorage.removeItem(SAVE_KEY);
-        localStorage.removeItem(OLD_SAVE_KEY);
       } catch (e) {}
       if (this.cloudDoc) this.cloudDoc.delete().catch(() => {});
       this.s = null;
@@ -1851,6 +1920,7 @@
       this.scene.fading = null;
       if (this.feed.mode === 'held') this.feed = new WW.RecordingFeed(WW.RECORDING);
       this.feed.offset = 0;
+      this.landing.show(true);
       this.showIntro();
     }
   }

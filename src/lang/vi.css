@@ -12,4 +12,5 @@ h3, .sec > h3 { font-size: 22px; text-shadow: 0.6px 0 0 currentColor; }
 .levelbox { font-size: 21px; }
 .iconbtn.wide { width: auto; padding: 3px 6px; }
 .tab { font-size: 15px; white-space: nowrap; }
-@media (max-width: 420px) { .tab { letter-spacing: -0.4px; } }
+@media (max-width: 420px) { .tab { font-size: 15px; letter-spacing: -0.4px; } }
+@media (max-width: 340px) { .tab { font-size: 14px; } }

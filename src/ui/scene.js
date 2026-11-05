@@ -234,6 +234,23 @@
       this.clamp();
     }
 
+    // Brings part of the world into view, only if it is not there already.
+    lookAt(r) {
+      const cam = this.cam;
+      const vw = this.css.w / cam.z;
+      const vh = this.css.h / cam.z;
+      const pad = 10;
+      if (r.x < cam.x + pad || r.x + r.w > cam.x + vw - pad) cam.x = r.x + r.w / 2 - vw / 2;
+      if (r.y < cam.y + pad || r.y + r.h > cam.y + vh - pad) cam.y = r.y + r.h / 2 - vh / 2;
+      this.clamp();
+    }
+    // Where a part of the world is on the page right now.
+    screenRect(r) {
+      const b = this.canvas.getBoundingClientRect();
+      const cam = this.cam;
+      return { left: b.left + (r.x - cam.x) * cam.z, top: b.top + (r.y - cam.y) * cam.z, width: r.w * cam.z, height: r.h * cam.z };
+    }
+
     toWorld(cssX, cssY) {
       return { x: this.cam.x + cssX / this.cam.z, y: this.cam.y + cssY / this.cam.z };
     }
@@ -310,7 +327,9 @@
       const g = { sp, frames: WW.animalFrames(sp), res, speed: 17 + Math.random() * 7, fly: sp.a === 'flyer', t: 0, dir: fromLeft ? 1 : -1, seat: null, local };
       if (local) {
         g.zone = 'out';
-        g.x = fromLeft ? -16 : OUT.W + 16;
+        // The practice kitchen has no time for the long road.
+        const near = !!this.game.feed && this.game.feed.mode === 'practice';
+        g.x = near ? OUT.DOOR.x + (fromLeft ? -50 : 50) : fromLeft ? -16 : OUT.W + 16;
         g.y = OUT.ROAD_Y + Math.random() * 8 - 4;
         g.state = 'approach';
         g.path = [{ x: OUT.DOOR.x + (fromLeft ? -5 : 5), y: OUT.ROAD_Y - 6 }];
@@ -342,7 +361,8 @@
       this.comingClock = ((ROUND_SECONDS / Math.max(1, E().capacity(this.st))) * (0.4 + Math.random() * 1.2)) / this.pace();
     }
     pace() {
-      return Math.max(1, (this.game.speed || 1) / 2);
+      const feed = this.game.feed;
+      return Math.max(1, (this.game.speed || 1) / 2, (feed && feed.pace) || 0);
     }
     // The first anyone hears of a new species is when it pays. One who never sits down is announced on the way past.
     announce(g) {
@@ -790,8 +810,10 @@
       const service = game.isService();
       const sky = game.sky();
       const m = this.inner();
-      this.syncStaff();
-      this.syncDirt();
+      if (!game.still) {
+        this.syncStaff();
+        this.syncDirt();
+      }
       // Day and night follow whether the real hamster is up.
       this.nightAmt += ((game.isAwake() ? 0 : 1) - this.nightAmt) * Math.min(1, dt * 1.2);
 
@@ -803,8 +825,10 @@
       this.updateArrivals(dt);
       for (const g of this.guests) this.updateGuest(g, dt);
       this.guests = this.guests.filter((g) => !g.dead);
-      this.updateWaiters(dt);
-      this.updateChefs(dt);
+      if (!game.still) {
+        this.updateWaiters(dt);
+        this.updateChefs(dt);
+      }
       this.updateVisitLife(dt, service);
       this.updateWalkers(dt, service);
       this.updateWeather(dt, sky);
@@ -1757,11 +1781,13 @@
       }
       if (x >= m.doorX && x < m.doorX + m.doorW && y >= m.frontY - 9) return { kind: 'door', rect: { x: m.doorX, y: m.frontY - 9, w: m.doorW, h: 27 } };
       for (const d of this.dirt) if (Math.abs(d.x - x) < 7 && Math.abs(d.y - y) < 6) return { kind: 'dirt', d, rect: { x: d.x - 5, y: d.y - 4, w: 10, h: 7 } };
-      // Guests and staff on top of the furniture.
-      const guest = this.hitGuests(x, y, 'in');
-      if (guest) return guest;
-      for (const list of [this.chefs, this.waiters, this.cleaners]) {
-        for (const c of list.values()) if (Math.abs(c.x - x) < 9 && y > c.y - 25 && y < c.y) return { kind: 'staff', id: c.id, rect: { x: c.x - 10, y: c.y - 25, w: 20, h: 25 } };
+      // Guests and staff on top of the furniture. In practice a tap always lands on what the coach is pointing at.
+      if (!this.game.practice) {
+        const guest = this.hitGuests(x, y, 'in');
+        if (guest) return guest;
+        for (const list of [this.chefs, this.waiters, this.cleaners]) {
+          for (const c of list.values()) if (Math.abs(c.x - x) < 9 && y > c.y - 25 && y < c.y) return { kind: 'staff', id: c.id, rect: { x: c.x - 10, y: c.y - 25, w: 20, h: 25 } };
+        }
       }
       for (let i = 0; i < m.slots; i++) {
         const sx = WORLD.STATION_X + i * WORLD.STATION_W;
@@ -1802,7 +1828,7 @@
         if (x < 0 || y < 0 || x >= OUT.W || y >= OUT.H) return { kind: 'none' };
         return { kind: 'tile', col, row, item: item || null, rect: item ? { x: item.x * TILE, y: item.y * TILE, w: WW.DECOR_BY_ID[item.id].w * TILE, h: WW.DECOR_BY_ID[item.id].h * TILE } : null };
       }
-      const guest = this.hitGuests(x, y, 'out') || this.hitWalkers(x, y);
+      const guest = this.game.practice ? null : this.hitGuests(x, y, 'out') || this.hitWalkers(x, y);
       if (guest) return guest;
       const item = yardAt(col, row);
       if (item) {

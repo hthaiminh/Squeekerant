@@ -9,7 +9,7 @@ const src = (f) => fs.readFileSync(path.join(root, 'src', f), 'utf8');
 const vi = process.argv[2] === 'vi';
 const pub = process.argv[2] === 'public';
 
-const ORDER = ['core/rng.js', 'art/px.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'art/animals.js', 'art/food.js', 'art/hamster.js', 'art/scene.js', 'art/outside.js', 'art/houses.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', ...(vi ? ['lang/vi.js'] : []), 'ui/sound.js', 'ui/music.js', 'ui/panels.js', 'ui/scene.js', 'ui/line.js', 'ui/main.js'];
+const ORDER = ['core/rng.js', 'art/px.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'art/animals.js', 'art/food.js', 'art/hamster.js', 'art/scene.js', 'art/outside.js', 'art/houses.js', 'art/logo.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', ...(vi ? ['lang/vi.js'] : []), 'ui/sound.js', 'ui/music.js', 'ui/panels.js', 'ui/scene.js', 'ui/line.js', 'ui/landing.js', 'ui/practice.js', 'ui/main.js'];
 
 const js = ORDER.map((f) => src(f)).join('\n').replace(/<\/script/g, '<\\/script');
 const css = src('ui/style.css') + (vi ? src('lang/vi.css') : '');
