@@ -137,6 +137,7 @@
       savedAt: t,
       shop: opts.shop || 'The Tiny Table',
       feedMode: feed.mode,
+      wheelCore: feed.core || null,
       chef: { name: opts.name || 'Bean', fur: opts.fur || 'golden', hat: opts.hat || 'toque' },
       cash: 300,
       till: 0,
@@ -209,6 +210,23 @@
     for (const id of WW.STARTER_DISHES) s.known[id] = { lvl: 1, made: 0 };
     prepareCritic(s, feed.hashBefore(round));
     return s;
+  }
+
+  // Moving to another source of rounds, or to a redeployed wheel: its rounds and running total start somewhere else.
+  // The restaurant stays exactly as it is and nothing is counted from the gap. Stoves run on the clock, so the caller moves those.
+  function moveToFeed(s, feed, t) {
+    const r = feed.settled(t);
+    const info = feed.round(r);
+    const cum = feed.live(t).cum;
+    Object.assign(s.clock, { round: r, cum: info.cum, guestN: Math.floor(cum / CFG.WORK_PER_GUEST), hash: feed.hashBefore(r), streak: 0, capRound: 0, capUsed: 0 });
+    s.km = Math.floor((info.cum * (feed.mmPerPass || 878)) / 1000000);
+    s.feedMode = feed.mode;
+    s.wheelCore = feed.core || null;
+    s.clockOffset = 0;
+    // Round numbers kept in the save would mean nothing on the new count.
+    s.festival = null;
+    for (const m of s.mail) if (m.kind === 'offer') m.round = r;
+    for (const st of s.stations) if (st.job && st.type === 'wok') st.job.start = cum;
   }
 
   // Older saves come forward with their restaurant intact.
@@ -2042,6 +2060,7 @@
     streetMovesLeft,
     moveStreet,
     canPlace,
+    moveToFeed,
     buyDecor,
     placeDecor,
     moveDecor,

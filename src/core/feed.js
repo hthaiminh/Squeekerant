@@ -195,6 +195,12 @@
     }
   }
 
+  // Public nodes that answer a browser, by chain. The wheel says which chain it is on.
+  const NODES = {
+    11155111: ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co'],
+    1: ['https://ethereum-rpc.publicnode.com', 'https://eth.drpc.org'],
+  };
+
   // Reads the official API for the live state, and SqueekCore for settled rounds.
   class LiveFeed {
     constructor(boot) {
@@ -202,6 +208,7 @@
       this.genesisMs = boot.genesis * 1000;
       this.core = boot.core;
       this.rpcs = boot.rpcs;
+      this.installation = boot.installation;
       this.status = boot.status;
       this.settledRound = boot.settled;
       this.roundsKnown = new Map();
@@ -220,17 +227,19 @@
     static async connect() {
       const API = 'https://api.squeekchain.com/v1';
       const timed = (url, opt) => fetch(url, Object.assign({ signal: AbortSignal.timeout(6000) }, opt));
-      const econ = await (await timed(API + '/economy/state')).json();
       const coreInfo = await (await timed(API + '/core')).json();
       const status = await (await timed(API + '/status')).json();
-      if (econ.status === 'unavailable' || coreInfo.status === 'unavailable') throw new Error('API unavailable');
+      if (coreInfo.status === 'unavailable') throw new Error('API unavailable');
+      const rpcs = NODES[coreInfo.chain.chainId];
+      if (!rpcs) throw new Error('No node for this chain.');
       const boot = {
-        core: econ.identities.core,
+        core: coreInfo.identities.core,
+        installation: status.installationId,
         genesis: Number(coreInfo.configuration.genesisTimestamp),
         status,
         settled: Number(status.builder.anchor.settledThroughRound),
         work: Number(status.builder.anchor.cumulativeWork),
-        rpcs: ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.drpc.org'],
+        rpcs,
       };
       const feed = new LiveFeed(boot);
       feed.api = API;
@@ -245,6 +254,11 @@
         // An error or an "unavailable" reply has no count in it. The last good one stands.
         const cum = Number(st.measurement && st.measurement.cumulativeWorkUnits);
         if (!Number.isFinite(cum)) throw new Error('No count in this reply.');
+        // Redeployed while the page is open. The game connects again and moves across.
+        if (st.installationId && st.installationId !== this.installation) {
+          this.replaced = true;
+          return;
+        }
         this.status = st;
         if (cum > this.liveCum) this.lastPassAt = Date.now();
         this.liveCum = cum;

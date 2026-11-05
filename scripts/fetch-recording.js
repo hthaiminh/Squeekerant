@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const API = 'https://api.squeekchain.com/v1';
-const RPCS = ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.drpc.org'];
+const RPCS = ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.gateway.tenderly.co'];
 const SEL_STATE = '0xc19d93fb';
 const SEL_PAGE = '0xc8b9e08f';
 const ROUND_MS = 600000;
@@ -98,9 +98,8 @@ function encodeGaps(passes) {
 }
 
 async function main() {
-  const econ = await getJson(`${API}/economy/state`);
-  const core = econ.identities.core;
   const coreInfo = await getJson(`${API}/core`);
+  const core = coreInfo.identities.core;
   const genesis = Number(coreInfo.configuration.genesisTimestamp);
   const stats = await getJson(`${API}/measurement/stats?range=30d`);
   console.log('core', core, 'genesis', genesis);

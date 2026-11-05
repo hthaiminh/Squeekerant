@@ -638,25 +638,39 @@
     // Live data
 
     async connectLive() {
-      if (window.claude) return; // The Artifact viewer has no network, the recording stays in charge.
+      if (window.claude || this.connecting) return; // The Artifact viewer has no network, the recording stays in charge.
+      this.connecting = true;
       try {
         const live = await WW.LiveFeed.connect();
-        const resume = this.s && this.s.feedMode === 'live' ? this.s.clock.round : null;
+        // Only a save from this same wheel carries on from where it was. Its rounds and count mean nothing on a redeployed one.
+        const resume = this.s && this.s.feedMode === 'live' && this.s.wheelCore === live.core ? this.s.clock.round : null;
         // Always far enough back for his last full day, whatever the save needs.
         const back = Math.max(0, live.settledRound - 320);
         await live.syncFrom(resume !== null ? Math.min(resume, back) : back);
         this.liveFeed = live;
-        this.pollLive();
         this.toast('Connected to the real wheel.', 'good');
         if (resume !== null) this.feed = live;
         else this.switchFeed(live);
+        this.reconnecting = false;
+        if (!this.polling) {
+          this.polling = true;
+          this.pollLive();
+        }
       } catch (e) {
         // No network. A save on the real wheel keeps waiting, anything else stays on the recording, and this tries again.
         setTimeout(() => this.connectLive(), 30000);
+      } finally {
+        this.connecting = false;
       }
     }
     pollLive() {
-      if (this.feed.mode === 'live') this.feed.poll();
+      if (this.feed.mode === 'live') {
+        if (!this.feed.replaced) this.feed.poll();
+        else if (!this.reconnecting) {
+          this.reconnecting = true;
+          this.connectLive();
+        }
+      }
       setTimeout(() => this.pollLive(), this.linegame && this.linegame.active ? 1000 : 2500);
     }
     // Going from one data source to another moves the clock but keeps the restaurant.
@@ -669,20 +683,7 @@
       for (const st of this.s.stations) {
         if (st.job && st.type === 'stove') st.job.start += t - before;
       }
-      const r = feed.settled(t);
-      const info = feed.round(r);
-      const c = this.s.clock;
-      c.round = r;
-      c.cum = info.cum;
-      c.guestN = Math.floor(feed.live(t).cum / WW.CFG.WORK_PER_GUEST);
-      c.hash = feed.hashBefore(r);
-      // Each source has its own running total, so moving across is not a distance milestone.
-      this.s.km = Math.floor((info.cum * (feed.mmPerPass || 878)) / 1000000);
-      this.s.clockOffset = 0;
-      this.s.feedMode = feed.mode;
-      for (const st of this.s.stations) {
-        if (st.job && st.type === 'wok') st.job.start = feed.live(t).cum;
-      }
+      E.moveToFeed(this.s, feed, t);
       this.dirty = true;
     }
     // Saves

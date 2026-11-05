@@ -310,6 +310,61 @@ test('a round only counts as settled once its work has been read', async () => {
   assert.equal(feed.settled(), 13);
 });
 
+test('the feed connects from what the API has today, and notices a redeploy', async () => {
+  require(path.join(src, 'core/feed.js'));
+  const real = globalThis.fetch;
+  const asked = [];
+  const statusOf = (installationId, cum) => ({ installationId, measurement: { freshness: 'online', coreStatus: 'IDLE', rpmMilli: 0, cumulativeWorkUnits: String(cum) }, builder: { anchor: { settledThroughRound: '218', cumulativeWork: String(cum) } } });
+  let status = statusOf('one', 3817);
+  globalThis.fetch = async (url) => {
+    asked.push(String(url).replace('https://api.squeekchain.com/v1', ''));
+    if (String(url).endsWith('/core')) return { json: async () => ({ status: 'available', chain: { chainId: '11155111' }, identities: { core: '0xabc' }, configuration: { genesisTimestamp: '1793735400' } }) };
+    return { json: async () => status };
+  };
+  try {
+    const feed = await WW.LiveFeed.connect();
+    assert.deepEqual(asked, ['/core', '/status'], 'only what it needs, /economy/state changes shape');
+    assert.equal(feed.core, '0xabc');
+    assert.ok(feed.rpcs.length >= 2, 'a spare node');
+    assert.equal(feed.settled(), 218);
+    await feed.poll();
+    assert.equal(feed.replaced, undefined);
+    status = statusOf('two', 12);
+    await feed.poll();
+    assert.equal(feed.replaced, true, 'another installation');
+    assert.equal(feed.live(0).cum, 3817, 'its numbers are not mixed in');
+    globalThis.fetch = async (url) => ({ json: async () => (String(url).endsWith('/core') ? { status: 'available', chain: { chainId: '424242' }, identities: { core: '0xabc' }, configuration: { genesisTimestamp: '1' } } : status) });
+    await assert.rejects(WW.LiveFeed.connect(), /No node/, 'a chain with no node waits rather than breaks');
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('a restaurant crosses to a redeployed wheel with everything it has', () => {
+  require(path.join(src, 'core/feed.js'));
+  const s = fresh(feedOf([0]));
+  Object.assign(s.clock, { round: 1295, cum: 92287, guestN: 9273, streak: 40, capRound: 1295, capUsed: 9 });
+  s.feedMode = 'live';
+  Object.assign(s, { cash: 4321, winks: 77, till: 55, level: 12, km: 81, festival: { round: 1290, km: 80 } });
+  s.mail = [{ id: 1, kind: 'offer', round: 1290 }];
+  s.stations[1].job = { dish: 'tossed_peas', start: 92000, need: 200, y: 32 };
+  s.stations[2].job = { dish: 'oat_porridge', start: 5, need: 6, y: 36 };
+  s.stock = { carrot_coins: 40 };
+  const keep = JSON.stringify([s.cash, s.winks, s.till, s.level, s.stock, s.furniture, s.book, s.known, s.stations[2].job, s.clock.quietTotal]);
+  const wheel = { mode: 'live', core: '0xnew', mmPerPass: 878, settled: () => 218, round: (r) => ({ r, work: 0, cum: 3817, hash: null, unknown: false }), roundEnd: (r) => r * ROUND, roundAt: (t) => Math.floor(t / ROUND) + 1, hashBefore: () => 'hnew', workBetween: () => 0, live: () => ({ state: 'quiet', rpm: 0, cum: 3830, agoMs: 1e9, round: 219 }) };
+  assert.equal(E.advance(s, wheel, 219 * ROUND), null, 'before moving it would sit frozen for a week');
+  E.moveToFeed(s, wheel, 219 * ROUND);
+  assert.equal(JSON.stringify([s.cash, s.winks, s.till, s.level, s.stock, s.furniture, s.book, s.known, s.stations[2].job, s.clock.quietTotal]), keep, 'the restaurant is untouched');
+  assert.deepEqual([s.clock.round, s.clock.cum, s.clock.guestN, s.clock.streak, s.wheelCore], [218, 3817, 383, 0, '0xnew']);
+  assert.equal(s.stations[1].job.start, 3830, 'a wok starts counting on the new wheel');
+  assert.equal(s.festival, null);
+  assert.equal(s.mail[0].round, 218);
+  const events = [];
+  E.pulse(s, wheel, 219 * ROUND, events);
+  assert.equal(events.length, 0, 'no guests from the gap');
+  assert.equal(E.newGame(0, wheel).wheelCore, '0xnew');
+});
+
 test('a bad reply from the API changes nothing', async () => {
   require(path.join(src, 'core/feed.js'));
   const good = { measurement: { freshness: 'online', coreStatus: 'IDLE', rpmMilli: 60000, cumulativeWorkUnits: '500' }, builder: { anchor: { settledThroughRound: '10', cumulativeWork: '500' } } };
