@@ -111,3 +111,9 @@ Real friends and saves that follow a wallet. Neighbours, their buildings and the
 ## Credits and rules kept
 
 Mechanics are inspired by Restaurant City style games and by films about small cooks, with no names, art, music or lines taken from them. Foods are limited to ones named safe for hamsters by at least one published care guide (PetMD, Chewy, Woodgreen, Burgess, or the Squeektoshi care policy), in small plain amounts. It is a game, not care advice.
+
+## Squeekchain Genesis
+
+The line below, a tag in the page's head (scripts/build.js) and a DNS TXT record on `_squeekchain.www.squeekerant.online` prove this project on Squeekchain Genesis. They are checked again every day, so all three must stay.
+
+squeekchain-project: 59c16db5-e31e-4532-966b-35152d96700f

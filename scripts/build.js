@@ -6,6 +6,8 @@ const fs = require('fs');
 const path = require('path');
 const root = path.join(__dirname, '..');
 const src = (f) => fs.readFileSync(path.join(root, 'src', f), 'utf8');
+// Squeekchain Genesis looks for this tag in the head of the live page every day, so it must stay. See the end of the README.
+const GENESIS_TAG = '<meta name="squeekchain-project" content="59c16db5-e31e-4532-966b-35152d96700f">';
 const vi = process.argv[2] === 'vi';
 const pub = process.argv[2] === 'public';
 
@@ -24,6 +26,6 @@ fs.mkdirSync(out, { recursive: true });
 if (!pub) fs.writeFileSync(path.join(out, 'artifact.html'), body);
 // The tab icon, the head chef from the game, stays inside the page so going live is still one file.
 const icon = fs.readFileSync(path.join(root, 'src', 'ui', 'icon.png')).toString('base64');
-const page = `<!doctype html>\n<html lang="${vi ? 'vi' : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="icon" type="image/png" href="data:image/png;base64,${icon}"></head><body>\n${body}\n</body></html>\n`;
+const page = `<!doctype html>\n<html lang="${vi ? 'vi' : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${GENESIS_TAG}<link rel="icon" type="image/png" href="data:image/png;base64,${icon}"></head><body>\n${body}\n</body></html>\n`;
 fs.writeFileSync(path.join(out, 'index.html'), page);
 console.log('built', vi ? 'vi' : 'en', Math.round(body.length / 1024) + ' KB');
