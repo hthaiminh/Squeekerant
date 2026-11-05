@@ -6,6 +6,8 @@
   const DRAG_PX = 6;
   const HOLD_MS = 420;
   const AWAKE_MS = 20 * 60000;
+  // The official API says it is unavailable for a short while now and then, so the first tries come quickly.
+  const RECONNECT_MS = [2000, 3000, 5000, 10000, 20000, 30000];
   const guestCount = (n) => `${n} guest${n === 1 ? '' : 's'}`;
 
   class Game {
@@ -798,13 +800,15 @@
           this.useLive(live);
         }
         this.reconnecting = false;
+        this.connectFails = 0;
         if (!this.polling) {
           this.polling = true;
           this.pollLive();
         }
       } catch (e) {
-        // No network. A save on the real wheel keeps waiting, anything else stays on the recording, and this tries again.
-        setTimeout(() => this.connectLive(), 30000);
+        // A save on the real wheel keeps waiting, anything else stays on the recording, and this tries again.
+        this.connectFails = this.connectFails || 0;
+        setTimeout(() => this.connectLive(), RECONNECT_MS[Math.min(this.connectFails++, RECONNECT_MS.length - 1)]);
       } finally {
         this.connecting = false;
       }

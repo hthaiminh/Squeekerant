@@ -323,7 +323,7 @@ test('the feed connects from what the API has today, and notices a redeploy', as
   };
   try {
     const feed = await WW.LiveFeed.connect();
-    assert.deepEqual(asked, ['/core', '/status'], 'only what it needs, /economy/state changes shape');
+    assert.deepEqual(asked, ['/status', '/core'], 'only what it needs, /economy/state changes shape');
     assert.equal(feed.core, '0xabc');
     assert.ok(feed.rpcs.length >= 2, 'a spare node');
     assert.equal(feed.settled(), 218);
@@ -335,6 +335,35 @@ test('the feed connects from what the API has today, and notices a redeploy', as
     assert.equal(feed.live(0).cum, 3817, 'its numbers are not mixed in');
     globalThis.fetch = async (url) => ({ json: async () => (String(url).endsWith('/core') ? { status: 'available', chain: { chainId: '424242' }, identities: { core: '0xabc' }, configuration: { genesisTimestamp: '1' } } : status) });
     await assert.rejects(WW.LiveFeed.connect(), /No node/, 'a chain with no node waits rather than breaks');
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('the wheel running today connects even while /core says its indexer is unavailable', async () => {
+  require(path.join(src, 'core/feed.js'));
+  const real = globalThis.fetch;
+  const asked = [];
+  const status = (installationId) => ({ installationId, measurement: { freshness: 'online', coreStatus: 'IDLE', rpmMilli: 0, cumulativeWorkUnits: '3817' }, builder: { status: 'available', anchor: { settledThroughRound: '252', cumulativeWork: '3817' } } });
+  let reply = status('sepolia-core-sepolia-20261103');
+  globalThis.fetch = async (url) => {
+    asked.push(String(url).replace('https://api.squeekchain.com/v1', ''));
+    if (String(url).endsWith('/core')) return { json: async () => ({ schemaVersion: 1, installationId: reply.installationId, status: 'unavailable', reason: 'indexer_unavailable' }) };
+    return { json: async () => reply };
+  };
+  try {
+    const feed = await WW.LiveFeed.connect();
+    assert.deepEqual(asked, ['/status'], 'a known installation needs nothing else');
+    assert.equal(feed.core, '0xfd6c166d4b8e2962e65746a13e5a0797cd4de0c4');
+    assert.equal(feed.genesisMs, Date.parse('2026-11-03T19:50:00Z'));
+    assert.equal(feed.settled(), 252);
+    assert.ok(feed.rpcs.length >= 2);
+    // A new installation has to ask, and waits if it cannot be told yet.
+    reply = status('sepolia-core-sepolia-next');
+    await assert.rejects(WW.LiveFeed.connect(), /unavailable/);
+    // A /status with nothing in it is not a wheel.
+    reply = { installationId: 'sepolia-core-sepolia-20261103', status: 'unavailable' };
+    await assert.rejects(WW.LiveFeed.connect(), /unavailable/);
   } finally {
     globalThis.fetch = real;
   }

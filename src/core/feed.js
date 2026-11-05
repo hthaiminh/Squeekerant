@@ -201,6 +201,12 @@
     1: ['https://ethereum-rpc.publicnode.com', 'https://eth.drpc.org'],
   };
 
+  // What never changes for one installation of the wheel. /core depends on an indexer that drops out for a few seconds many times an
+  // hour, so it is only asked about an installation that is not listed here. /status keeps working and says which one is running.
+  const KNOWN_WHEELS = {
+    'sepolia-core-sepolia-20261103': { core: '0xfd6c166d4b8e2962e65746a13e5a0797cd4de0c4', chainId: '11155111', genesis: 1793735400 },
+  };
+
   // Reads the official API for the live state, and SqueekCore for settled rounds.
   class LiveFeed {
     constructor(boot) {
@@ -227,18 +233,24 @@
     static async connect() {
       const API = 'https://api.squeekchain.com/v1';
       const timed = (url, opt) => fetch(url, Object.assign({ signal: AbortSignal.timeout(6000) }, opt));
-      const coreInfo = await (await timed(API + '/core')).json();
       const status = await (await timed(API + '/status')).json();
-      if (coreInfo.status === 'unavailable') throw new Error('API unavailable');
-      const rpcs = NODES[coreInfo.chain.chainId];
+      const anchor = status.builder && status.builder.anchor;
+      if (!status.measurement || !anchor) throw new Error('API unavailable');
+      let wheel = KNOWN_WHEELS[status.installationId];
+      if (!wheel) {
+        const coreInfo = await (await timed(API + '/core')).json();
+        if (coreInfo.status === 'unavailable') throw new Error('API unavailable');
+        wheel = { core: coreInfo.identities.core, chainId: coreInfo.chain.chainId, genesis: Number(coreInfo.configuration.genesisTimestamp) };
+      }
+      const rpcs = NODES[wheel.chainId];
       if (!rpcs) throw new Error('No node for this chain.');
       const boot = {
-        core: coreInfo.identities.core,
+        core: wheel.core,
         installation: status.installationId,
-        genesis: Number(coreInfo.configuration.genesisTimestamp),
+        genesis: wheel.genesis,
         status,
-        settled: Number(status.builder.anchor.settledThroughRound),
-        work: Number(status.builder.anchor.cumulativeWork),
+        settled: Number(anchor.settledThroughRound),
+        work: Number(anchor.cumulativeWork),
         rpcs,
       };
       const feed = new LiveFeed(boot);
