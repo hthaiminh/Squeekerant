@@ -172,6 +172,7 @@
           el('p', { class: 'note' }, 'Only restaurants with a connected wallet are on the leaderboard. You only sign a message. It costs nothing and sends no transaction.')
         );
       }
+      parts.push(el('p', { class: 'note' }, WW.updatesLink()));
       this.card.replaceChildren(...parts);
     }
     connect() {

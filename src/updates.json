@@ -1,0 +1,84 @@
+[
+  {
+    "v": "0.0.8",
+    "date": "2026-11-06",
+    "title": "What's new",
+    "items": [
+      { "kind": "new", "text": "This page: every update to the game, newest first. The welcome page and How To Play link here." }
+    ]
+  },
+  {
+    "v": "0.0.7",
+    "date": "2026-11-06",
+    "title": "Safer saves",
+    "items": [
+      { "big": true, "kind": "fixed", "title": "One restaurant, one tab", "text": "With the game open in two tabs, the one left in the background could save an older restaurant over what you had just done. Now the newest tab plays, and an older one stops with a Play here button." },
+      { "kind": "fixed", "text": "When his data stops coming in, the wheel now says No signal instead of showing his last moment as if it were now." },
+      { "kind": "fixed", "text": "Emoji and letters the pixel fonts cannot draw are left off the share picture, so it looks the same on X as in the game. Your post keeps the full name." }
+    ]
+  },
+  {
+    "v": "0.0.6",
+    "date": "2026-11-06",
+    "title": "Show off your restaurant",
+    "items": [
+      { "big": true, "kind": "new", "title": "Share your restaurant", "text": "The new camera button paints a picture of your restaurant: your building in the woods, the room as it is right now, your head chef, your level, guests fed and the rarest guests you have met. Post on X shows the picture right in your post. On a phone it goes to any app." },
+      { "big": true, "kind": "fixed", "title": "The same Dream Dish for everyone", "text": "A restaurant opened while Squeektoshi is asleep now counts the whole sleep, so it wakes up to the same Dream Dish as everyone else." },
+      { "kind": "new", "text": "While he sleeps, the ribbon and the welcome page say how long he has slept and when his dream will come." },
+      { "kind": "new", "text": "Share straight from the Dream Dish card." },
+      { "kind": "new", "text": "Links to the game show a picture when you paste them into X, Discord or Telegram." },
+      { "kind": "fixed", "text": "Back after weeks away during a long sleep, your Dream Dish is no longer lost." },
+      { "kind": "fixed", "text": "Starting a new restaurant no longer shows cards left over from the old one." },
+      { "kind": "better", "text": "Vietnamese letters in names now use a matching pixel font." },
+      { "kind": "new", "text": "The game counts how far players get: one number per step per day, nothing about who." }
+    ]
+  },
+  {
+    "v": "0.0.5",
+    "date": "2026-11-05",
+    "title": "A steadier connection",
+    "items": [
+      { "kind": "fixed", "text": "The game stays on the real wheel when the official data service drops out for a moment, instead of switching to the replay for half a minute." }
+    ]
+  },
+  {
+    "v": "0.0.4",
+    "date": "2026-11-05",
+    "title": "Welcome in",
+    "items": [
+      { "big": true, "kind": "new", "title": "A welcome page", "text": "Every visit opens on the game's woods at the real hour, with your restaurant in them and two ways in, with a wallet or without." },
+      { "big": true, "kind": "new", "title": "The practice kitchen", "text": "New players learn the whole game in 26 short steps with a pretend hamster who runs and sleeps on cue. Nothing there counts, and your real restaurant waits as it was." },
+      { "kind": "new", "text": "A How To Play tab with everything in short, and a way back to the practice kitchen." }
+    ]
+  },
+  {
+    "v": "0.0.3",
+    "date": "2026-11-05",
+    "title": "The leaderboard",
+    "items": [
+      { "big": true, "kind": "new", "title": "Leaderboard", "text": "Connect a wallet to put your restaurant on the board, ranked by level. You only sign a message: no fee, no transaction. The board stands outside your restaurant." }
+    ]
+  },
+  {
+    "v": "0.0.2",
+    "date": "2026-11-05",
+    "title": "Back on the real wheel",
+    "items": [
+      { "big": true, "kind": "fixed", "title": "Following the new wheel", "text": "Squeekchain moved Squeektoshi's wheel to a new contract. The game follows it now, so guests come with his real runs again instead of a replay." },
+      { "kind": "new", "text": "The game has its own address: www.squeekerant.online." }
+    ]
+  },
+  {
+    "v": "0.0.1",
+    "date": "2026-11-04",
+    "title": "Opening day",
+    "items": [
+      { "big": true, "kind": "new", "title": "Squeekerant opens", "text": "A tiny pixel restaurant run live by Squeektoshi, a real hamster on a real wheel. When he runs, guests walk in and the woks fire. When he sleeps, the pots simmer and he dreams up new dishes." },
+      { "kind": "new", "text": "180 kinds of tiny animal guests to meet." },
+      { "kind": "new", "text": "A stove, a wok and a pot, each on its own clock: real time, his wheel passes and his sleep." },
+      { "kind": "new", "text": "Neighbours on Skirting Street to visit, help out, trade with and hire from." },
+      { "kind": "new", "text": "Furniture, yard pieces and building parts, four seasons and changing weather." },
+      { "kind": "new", "text": "On the Line, a quick game turned by the real wheel." }
+    ]
+  }
+]

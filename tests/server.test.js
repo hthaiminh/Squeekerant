@@ -569,3 +569,27 @@ test('the score the game sends is one the server takes', () => {
   assert.ok(!clean.error && !clean.impossible, JSON.stringify(clean));
   assert.deepEqual([clean.shop, clean.chef, clean.fur, clean.hat, clean.level, clean.house], [s.shop, s.chef.name, s.chef.fur, s.chef.hat, 1, 1]);
 });
+
+// The updates page.
+test('the updates page lists every release newest first, the big things before the small ones', () => {
+  const fs = require('fs');
+  const { updatesPage, check } = require('../scripts/updates-page');
+  const list = JSON.parse(fs.readFileSync(path.join(src, 'updates.json'), 'utf8'));
+  check(list);
+  const html = updatesPage(list, { icon: 'x', logo: 'y' });
+  const at = list.map((r) => html.indexOf(`id="v${r.v}"`));
+  assert.ok(at.every((i, k) => i > 0 && (k === 0 || i > at[k - 1])), 'newest first');
+  assert.equal((html.match(/class="now"/g) || []).length, 1, 'one Latest');
+  assert.ok(html.indexOf('class="now"') < at[1], 'on the newest');
+  for (const r of list) {
+    const part = html.slice(html.indexOf(`id="v${r.v}"`), html.indexOf('</article>', html.indexOf(`id="v${r.v}"`)));
+    const big = part.indexOf('<ul class="big">');
+    const small = part.indexOf('<ul class="small">');
+    if (big >= 0 && small >= 0) assert.ok(big < small, `${r.v}: big before small`);
+    assert.equal((part.match(/<h3>/g) || []).length, r.items.filter((it) => it.big).length, `${r.v}: every big item has its title`);
+  }
+  assert.doesNotMatch(html, /[ăđơưĂĐƠƯẠ-ỹ]/, 'English like the rest of the public site');
+  assert.match(updatesPage([{ v: '1.0.0', date: '2026-12-01', items: [{ kind: 'new', text: '<b>bold</b>' }] }], { icon: '', logo: '' }), /&lt;b&gt;bold&lt;\/b&gt;/, 'text is only text');
+  const one = (over) => [Object.assign({ v: '0.0.2', date: '2026-11-06', items: [{ kind: 'new', text: 'x' }] }, over)];
+  for (const bad of [[], one({ v: '2' }), one({ date: 'today' }), one({ items: [] }), one({ items: [{ kind: 'shiny', text: 'x' }] }), one({ items: [{ kind: 'new', big: true, text: 'x' }] }), one({}).concat(one({ v: '0.0.3' }))]) assert.throws(() => check(bad));
+});

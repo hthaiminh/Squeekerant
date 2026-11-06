@@ -342,6 +342,7 @@ input[type=text] { width: 100%; background: var(--paper); border: 0; padding: 6p
 .landingcard .btn.small { min-height: 30px; font-size: 20px; justify-self: center; }
 .landingcard .btn img { width: 24px; height: 24px; }
 .landingcard .note { text-align: center; }
+.updateslink { color: var(--brick); font-weight: 400; }
 .landingwallet { display: grid; gap: 2px; justify-items: center; text-align: center; }
 .landingwallet .addr { font-size: 18px; }
 body.landing #toasts { z-index: 40; left: 50%; bottom: 20px; width: min(92vw, 440px); }

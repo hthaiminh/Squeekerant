@@ -1144,6 +1144,7 @@
           item(icon('trophy'), 'Leaderboard', 'Restaurants are ranked by level. Connect a wallet to be listed. You only sign a message, which costs nothing and sends no transaction.'),
           item(icon('camera'), 'Show it off', 'The camera button paints a picture of your restaurant to post or send.')
         ),
+        el('p', { class: 'note', style: 'margin-top:12px;text-align:center' }, WW.updatesLink()),
       ];
     }
   }
@@ -1154,6 +1155,8 @@
   WW.icon = icon;
   WW.btn = btn;
   WW.fmt = fmt;
+  // The updates page. The Artifact preview has no site of its own, so it points at the real one.
+  WW.updatesLink = () => el('a', { class: 'updateslink', href: globalThis.claude ? 'https://www.squeekerant.online/updates' : '/updates', target: '_blank', rel: 'noopener noreferrer' }, "What's new", WW.LATEST_UPDATE ? ` ${WW.LATEST_UPDATE}` : '');
   WW.money = money;
   WW.flChip = flChip;
   WW.dishImg = dishImg;

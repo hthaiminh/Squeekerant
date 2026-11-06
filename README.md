@@ -70,6 +70,10 @@ The data is kept in the `pictures` table (id, when, data), with nothing about wh
 
 A link to the site shows a picture and a line of text on X, Discord and Telegram. `scripts/build.js` writes the tags into the page head, and the picture is `src/ui/og.png`, 1200 by 630, painted from the game itself: a dressed level 24 restaurant on a spring day with him running. The build copies it next to the page, and the public build stops if it is missing.
 
+## Updates
+
+https://www.squeekerant.online/updates lists every release, newest first, from `src/updates.json`, built into `updates.html` by `scripts/updates-page.js`. Each deploy is one release, numbered 0.0.1, 0.0.2 and on. In each release the items marked big come first with a title, the small ones follow in small print, and each says New, Better or Fixed. The build stops if a release is out of order or an item is missing something, and the welcome page and How To Play link there with the latest number.
+
 ## Counts
 
 To see how far people get, the game counts a few steps: opening the page for the first time, connecting a wallet, starting, finishing or leaving the practice kitchen and each of its steps, opening a real restaurant, a first real guest, a first Dream Dish, playing today, still coming back after 1, 3, 7, 14 and 30 days, and using the share picture. The full list is in `server/rules.js`, and nothing else is stored.

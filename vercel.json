@@ -5,7 +5,8 @@
   "outputDirectory": "public",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/p/(.*)", "destination": "/api/index" }
+    { "source": "/p/(.*)", "destination": "/api/index" },
+    { "source": "/updates", "destination": "/updates.html" }
   ],
   "functions": {
     "api/index.js": { "includeFiles": "src/**" }

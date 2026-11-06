@@ -28,7 +28,10 @@ const pub = process.argv[2] === 'public';
 
 const ORDER = ['core/rng.js', 'art/px.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'art/animals.js', 'art/food.js', 'art/hamster.js', 'art/scene.js', 'art/outside.js', 'art/houses.js', 'art/logo.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', 'core/counter.js', ...(vi ? ['lang/vi.js'] : []), 'ui/sound.js', 'ui/music.js', 'ui/panels.js', 'ui/scene.js', 'ui/line.js', 'ui/landing.js', 'ui/share.js', 'ui/practice.js', 'ui/main.js'];
 
-const js = ORDER.map((f) => src(f)).join('\n').replace(/<\/script/g, '<\\/script');
+// The releases on /updates. The game links there and shows the latest number.
+const { updatesPage } = require('./updates-page');
+const updates = JSON.parse(src('updates.json'));
+const js = (`globalThis.WW = globalThis.WW || {};\nWW.LATEST_UPDATE = ${JSON.stringify(updates[0].v)};\n` + ORDER.map((f) => src(f)).join('\n')).replace(/<\/script/g, '<\\/script');
 const css = src('ui/style.css') + (vi ? src('lang/vi.css') : '');
 let template = src('ui/template.html');
 if (vi) template = template.replace('family=Jersey+20&family=Pixelify+Sans:wght@600;700&family=VT323', 'family=Pixelify+Sans:wght@700&family=VT323');
@@ -48,4 +51,11 @@ fs.writeFileSync(path.join(out, 'index.html'), page);
 // The preview picture sits next to the page. It is made from the game itself, see the README. The public build must have it.
 const og = path.join(root, 'src', 'ui', 'og.png');
 if (!vi && (pub || fs.existsSync(og))) fs.copyFileSync(og, path.join(out, 'og.png'));
+// The updates page, served at /updates, English like the rest of the public site.
+if (!vi) {
+  const logo = fs.readFileSync(path.join(root, 'src', 'ui', 'logo.png')).toString('base64');
+  const notes = updatesPage(updates, { icon, logo, site: SITE });
+  if (/[ăđơưĂĐƠƯẠ-ỹ]/.test(notes)) throw new Error('Vietnamese text found on the updates page');
+  fs.writeFileSync(path.join(out, 'updates.html'), notes);
+}
 console.log('built', vi ? 'vi' : 'en', Math.round(body.length / 1024) + ' KB');

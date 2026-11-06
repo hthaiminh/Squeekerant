@@ -332,6 +332,7 @@
     "Run by a real hamster": "Do một chú hamster thật điều hành",
     "Sharing works on the real site, www.squeekerant.online.": "Chỉ chia sẻ được trên trang thật, www.squeekerant.online.",
     "Send it to any app, X included.": "Gửi sang ứng dụng nào cũng được, kể cả X.",
+    "What's new": "Có gì mới",
     "Open in another tab": "Đang mở ở tab khác",
     "Squeekerant is playing in another tab now. This one has stopped, so the two can never save over each other.": "Squeekerant đang chơi ở một tab khác. Tab này đã dừng để hai tab không bao giờ lưu đè lên nhau.",
     "Play here": "Chơi ở đây",

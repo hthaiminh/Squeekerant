@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const { createApp } = require('../server/app');
 const { memoryStore } = require('../server/store');
 const dist = path.join(__dirname, '..', 'dist');
-const PAGES = { '/': 'index.html', '/vi': 'vi/index.html', '/vi/': 'vi/index.html' };
+const PAGES = { '/': 'index.html', '/updates': 'updates.html', '/vi': 'vi/index.html', '/vi/': 'vi/index.html' };
 const LAST_TRY = 10;
 // A leaderboard for trying things here. It lives in memory and is empty again after a restart.
 const api = createApp({ store: memoryStore(), secret: crypto.randomBytes(32), local: true });
