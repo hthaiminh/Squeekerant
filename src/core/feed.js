@@ -40,6 +40,20 @@
     return lo; // how many entries are <= x
   }
 
+  // How many rounds up to r he stayed off the wheel, counted the way the rules count them: a missing record neither adds nor breaks.
+  // A restaurant that opens in the middle of a sleep starts from this, so it gets the same dream as everyone else.
+  const SLEEP_READ_ROUNDS = 320;
+  function quietRounds(feed, r, known) {
+    let n = 0;
+    for (let q = r; q > r - SLEEP_READ_ROUNDS && known(q); q--) {
+      const info = feed.round(q);
+      if (info.unknown) continue;
+      if (info.work > 0) break;
+      n++;
+    }
+    return n;
+  }
+
   class RecordingFeed {
     constructor(rec) {
       this.mode = 'recording';
@@ -94,6 +108,9 @@
         hash: h ? (k === 0 ? h : h + k.toString(16)) : null,
         unknown,
       };
+    }
+    quietUpTo(r) {
+      return quietRounds(this, r, () => true);
     }
     hashBefore(r) {
       for (let q = r; q > r - this.len; q--) {
@@ -366,6 +383,10 @@
       for (const [q, v] of this.roundsKnown) if (q <= r && v.cum > cum) cum = v.cum;
       return { r, work: 0, cum, hash: null, unknown: false };
     }
+    // Only as far back as has really been read. A round not read yet proves nothing.
+    quietUpTo(r) {
+      return quietRounds(this, r, (q) => q >= 1 && this.knows(q, q));
+    }
     hashBefore(r) {
       let best = null;
       for (const [q, v] of this.roundsKnown) if (q <= r && (!best || q > best.r)) best = v;
@@ -425,6 +446,9 @@
     }
     round(r) {
       return { r, work: 0, cum: this.clock.cum, hash: null, unknown: true };
+    }
+    quietUpTo() {
+      return 0;
     }
     hashBefore() {
       return this.clock.hash;

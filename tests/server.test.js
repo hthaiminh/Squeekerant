@@ -8,7 +8,7 @@ const { memoryStore, closedStore, sqlStore } = require('../server/store');
 const rules = require('../server/rules');
 
 const src = path.join(__dirname, '..', 'src');
-for (const f of ['core/rng.js', 'art/px.js', 'art/scene.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js']) require(path.join(src, f));
+for (const f of ['core/rng.js', 'art/px.js', 'art/scene.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', 'core/counter.js']) require(path.join(src, f));
 const WW = globalThis.WW;
 const E = WW.Engine;
 
@@ -190,7 +190,260 @@ test('a database that fails says so and sends no secrets', async () => {
   }
 });
 
+test('only the steps on the list are counted, each once a request', async () => {
+  const { call, clock } = setup();
+  const send = (steps, headers) => call('POST', '/api/count', { steps }, headers);
+  assert.deepEqual((await send(['first_visit', 'opened', 'first_visit', 'made_up', 7, null, '<b>'])).json, { ok: true });
+  const read = async () => (await call('GET', '/api/counts')).json.rows.map((r) => [r.day, r.step, r.n]);
+  assert.deepEqual(await read(), [['2026-12-01', 'first_visit', 1], ['2026-12-01', 'opened', 1]]);
+  await send(['first_visit']);
+  await send(['made_up']);
+  assert.deepEqual(await read(), [['2026-12-01', 'first_visit', 2], ['2026-12-01', 'opened', 1]]);
+  clock.now += 86400000;
+  await send(['opened']);
+  assert.deepEqual((await read()).pop(), ['2026-12-02', 'opened', 1], 'a new day starts its own count');
+  for (const bad of [null, {}, { steps: 'opened' }, { steps: new Array(61).fill('opened') }]) assert.equal((await call('POST', '/api/count', bad)).status, 400, JSON.stringify(bad));
+  assert.equal((await send(['opened'], { host: 'evil.example' })).status, 403, 'only from the real site');
+  assert.match((await call('GET', '/api/counts')).cache, /s-maxage/, 'reading rarely reaches the database');
+  assert.equal((await send(['opened'])).cache, 'no-store');
+});
+
+test('one address can only send so many counts an hour, so a flood cannot keep the database awake', async () => {
+  const { call, clock } = setup();
+  const most = require('../server/app').COUNTS_PER_HOUR;
+  const send = (ip) => call('POST', '/api/count', { steps: ['active'] }, { 'x-real-ip': ip });
+  for (let i = 0; i < most; i++) assert.equal((await send('198.51.100.20')).status, 200);
+  assert.equal((await send('198.51.100.20')).status, 429);
+  assert.equal((await send('198.51.100.21')).status, 200, 'someone else still counts');
+  clock.now += 3600000;
+  assert.equal((await send('198.51.100.20')).status, 200, 'and the next hour starts again');
+});
+
+test('the counts keep nothing about who sent them', async () => {
+  const seen = [];
+  const store = sqlStore(async (text, params) => {
+    seen.push([text, params]);
+    return [];
+  });
+  const { call } = setup({ store });
+  await call('POST', '/api/count', { steps: ['opened', 'active'] }, { 'x-forwarded-for': '203.0.113.9', 'user-agent': 'Someone', authorization: 'Bearer abc' });
+  const last = seen.pop();
+  assert.match(last[0], /INSERT INTO counts/);
+  assert.deepEqual(last[1], ['2026-12-01', '["opened","active"]'], 'a day and the steps, nothing else');
+  assert.ok(!JSON.stringify(seen).includes('203.0.113.9'));
+});
+
+test('the counts page shows every step on the list and escapes nothing it did not write', async () => {
+  const { call } = setup();
+  await call('POST', '/api/count', { steps: ['opened', 'lesson_wheel'] });
+  const page = await call('GET', '/api/stats');
+  assert.equal(page.status, 200);
+  assert.match(page.html, /noindex/);
+  for (const [, label] of rules.COUNT_LABELS) assert.ok(page.html.includes(label), label);
+  assert.match(page.html, /Opened a real restaurant<\/td>(<td>[^<]*<\/td>)*<td><b>1<\/b>/);
+  const closed = setup({ store: closedStore });
+  assert.equal((await closed.call('POST', '/api/count', { steps: ['opened'] })).json.ok, false, 'no database, no count, no error');
+  assert.deepEqual((await closed.call('GET', '/api/counts')).json, { open: false, rows: [] });
+  assert.equal((await closed.call('GET', '/api/stats')).status, 200);
+});
+
+// Shared pictures. The server paints them with the game's own painters, loaded into a world of their own.
+const pictures = require('../server/picture');
+function snapshot(over = {}) {
+  const PW = pictures.world();
+  const PE = PW.Engine;
+  const feed = { mode: 'live', settled: () => 100, round: () => ({ cum: 0, hash: 'h', work: 0 }), live: () => ({ cum: 0, state: 'running', rpm: 80 }), hashBefore: () => 'h' };
+  const s = PE.newGame(0, feed, { shop: 'Bean Burrow', name: 'Mochi' });
+  s.level = 9;
+  s.stats.served = 1234;
+  for (const a of PW.ANIMALS.slice(0, 40)) s.book[a.id] = 2;
+  s.dreamDish = { key: 'd:3:g', round: 1, gold: true, sleptRounds: 95 };
+  const seat = PE.seatsOf(s)[0];
+  const scene = {
+    nightAmt: 0,
+    guests: [{ sp: PW.ANIMALS[3], x: seat.x * 16 + 8, y: 117 + seat.y * 16, dir: seat.face, state: 'eat', seat, plate: 'carrot_coins', speed: 20, zone: 'in' }],
+    chefs: new Map([['head', { id: 'head', x: 70, y: 78, state: 'stir' }]]),
+    waiters: new Map([['starter_waiter', { id: 'starter_waiter', x: 60, y: 120, state: 'idle', path: [] }]]),
+    cleaners: new Map(),
+    robots: [],
+    dirt: [],
+  };
+  const game = { s, scene, feed, live: { state: 'running', rpm: 80 }, visit: null, sky: () => ({ season: 'spring', weather: 'clear' }), now: () => 0, topRanks: () => [], ranksNote: () => ['NOBODY YET'] };
+  return Object.assign(JSON.parse(JSON.stringify(PW.pictureOf(game))), over);
+}
+const pngSize = (buf) => [buf.readUInt32BE(16), buf.readUInt32BE(20)];
+
+test('a shared picture gets its own link, and the server paints it from plain data', async () => {
+  const { call } = setup();
+  const raw = snapshot();
+  const made = await call('POST', '/api/picture', raw);
+  assert.equal(made.status, 200, JSON.stringify(made.json));
+  assert.equal(made.json.ok, true);
+  assert.match(made.json.url, /^https:\/\/www\.squeekerant\.online\/p\/[A-Za-z0-9_-]{12}$/);
+  assert.equal((await call('POST', '/api/picture', raw)).json.id, made.json.id, 'the same picture keeps its link');
+  const page = await call('GET', '/p/' + made.json.id);
+  assert.equal(page.status, 200);
+  assert.ok(page.html.includes(`<meta property="og:image" content="https://www.squeekerant.online/p/${made.json.id}.png">`));
+  assert.ok(page.html.includes('<meta name="twitter:card" content="summary_large_image">'));
+  assert.ok(page.html.includes('Bean Burrow, a tiny restaurant run by a real hamster'));
+  assert.ok(page.html.includes('<a href="/">Play Squeekerant</a>'));
+  const png = await call('GET', `/p/${made.json.id}.png`);
+  assert.equal(png.status, 200);
+  assert.equal(png.type, 'image/png');
+  assert.match(png.cache, /immutable/, 'the picture for an address never changes');
+  assert.deepEqual(pngSize(png.body), [1200, 630]);
+  // An address with no picture behind it still opens, with the game's own picture, and is only briefly kept.
+  const none = await call('GET', '/p/AAAAAAAAAAAA');
+  assert.equal(none.status, 200);
+  assert.ok(none.html.includes('content="https://www.squeekerant.online/og.png"'));
+  assert.doesNotMatch(none.cache, /immutable|86400/);
+  assert.equal((await call('GET', '/p/AAAAAAAAAAAA.png')).status, 404);
+  assert.equal((await call('GET', '/p/short')).status, 404);
+  // Without a database there is no link, and the game posts the site's own.
+  const closed = setup({ store: closedStore });
+  assert.equal((await closed.call('POST', '/api/picture', raw)).json.ok, false);
+  assert.equal((await closed.call('GET', '/p/' + made.json.id)).status, 200);
+  assert.equal((await call('POST', '/api/picture', raw, { host: 'evil.example' })).status, 403, 'only from the real site');
+});
+
+test('only the game\'s own pieces get into a picture, and the names follow the board\'s rules', async () => {
+  const raw = snapshot();
+  for (const bad of [null, 'x', {}, { v: 2 }, snapshot({ room: [99, 99] }), snapshot({ level: 0 }), snapshot({ level: 1.5 }), snapshot({ served: -1 }), snapshot({ seed: 'x' }), snapshot({ chef: 'Mochi' })]) assert.equal(pictures.clean(bad), null, JSON.stringify(bad && bad.room));
+  const odd = snapshot({ shop: 'visit scam.xyz now', stars: 99, parade: ['dragon', raw.parade[0], raw.parade[0]], dream: 'd:999', season: 'monsoon', live: 'on fire' });
+  odd.chef = ['@mochi', 'neon', 'crown of thorns'];
+  odd.furniture.push(['nope', 1, 1], ['cork', 99, 1], ['__proto__', 1, 1], ['stepping_stones', 1, 1], 'cork');
+  odd.yard.push(['cork', 30, 10], ['stepping_stones', 30, 10]);
+  odd.guests.push(['dragon', 10, 10, 1, 'eat', null, null, 20], [raw.parade[0], 1e9, 10, 1, 'eat', null, null, 20], [raw.parade[0], 10, 10, 1, '<b>', null, null, 20]);
+  odd.stock.push(['made_up_dish', 3], ['carrot_coins', -1]);
+  odd.ranks = [[1, 'SOMEONE', 30]];
+  odd.note = ['GIVEAWAY AT SCAM'];
+  const p = pictures.clean(odd);
+  assert.equal(p.shop, 'A Tiny Table', 'a link in a name is not shown');
+  assert.equal(p.chef[0], 'Bean');
+  assert.deepEqual(p.chef.slice(1), ['golden', 'toque']);
+  assert.equal(p.stars, 0);
+  assert.deepEqual(p.parade, [raw.parade[0]]);
+  assert.equal(p.dream, null);
+  assert.equal(p.season, 'spring');
+  assert.equal(p.live, 'quiet');
+  assert.equal(p.furniture.length, raw.furniture.length, 'only real pieces, inside the room');
+  assert.deepEqual(p.yard, [['stepping_stones', 30, 10]], 'only yard pieces in the yard');
+  assert.equal(p.guests.length, raw.guests.length);
+  assert.equal(p.stock.length, raw.stock.length);
+  assert.deepEqual([p.ranks, p.note], [[], []], 'the board on a picture is never the sender\'s');
+  // A kept picture is checked again before it is painted.
+  await assert.rejects(pictures.render(Object.assign({}, p, { room: [1, 1] }), 'BBBBBBBBBBBB'));
+});
+
+test('a picture shows the real board, and pictures have limits', async () => {
+  const { call, signIn, score, store } = setup();
+  const s = await signIn(ALICE);
+  await score(s.json.token, play({ shop: 'Café Ñandú', level: 12 }));
+  const made = await call('POST', '/api/picture', snapshot());
+  const kept = await store.picture(made.json.id);
+  assert.deepEqual(kept.ranks, [[1, 'CAFE NANDU', 12]], 'plain capitals for the sign outside');
+  assert.deepEqual(kept.note, []);
+  // One address may make so many an hour. Another address may still make its own.
+  const from = (ip, seed) => call('POST', '/api/picture', snapshot({ seed }), { 'x-real-ip': ip });
+  for (let i = 1; i <= require('../server/app').PICTURES_PER_HOUR; i++) assert.equal((await from('198.51.100.7', i)).status, 200);
+  assert.equal((await from('198.51.100.7', 999)).status, 429);
+  assert.equal((await from('198.51.100.8', 999)).status, 200);
+  // And there is a ceiling for the whole day.
+  const full = setup();
+  full.store.picturesToday = async () => require('../server/app').PICTURES_PER_DAY;
+  assert.equal((await full.call('POST', '/api/picture', snapshot())).json.ok, false);
+});
+
+test('the pictures keep nothing about who made them', async () => {
+  const seen = [];
+  const store = sqlStore(async (text, params) => {
+    seen.push([text, params]);
+    if (/SELECT pic FROM pictures/.test(text)) return [];
+    if (/count\(\*\) AS n FROM pictures/.test(text)) return [{ n: 0 }];
+    if (/FROM players/.test(text) && /count\(\*\)/.test(text)) return [{ everyone: 0 }];
+    return [];
+  });
+  const { call } = setup({ store });
+  const made = await call('POST', '/api/picture', snapshot(), { 'x-forwarded-for': '203.0.113.9', 'x-real-ip': '203.0.113.9', 'user-agent': 'Someone' });
+  assert.equal(made.json.ok, true, JSON.stringify(made.json));
+  const insert = seen.find(([text]) => /INSERT INTO pictures/.test(text));
+  assert.deepEqual(insert[1].slice(0, 2), [made.json.id, '2026-12-01T00:00:00.000Z']);
+  assert.ok(!JSON.stringify(seen).includes('203.0.113.9'));
+  assert.ok(!JSON.stringify(seen).includes('Someone'));
+});
+
+test('the picture server reads the game in the build\'s own order, with the page\'s own fonts', () => {
+  const fs = require('fs');
+  const build = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'build.js'), 'utf8');
+  const order = Array.from(build.match(/const ORDER = \[(.+)\];/)[1].matchAll(/'([^']+\.js)'/g), (m) => m[1]);
+  let at = -1;
+  for (const file of pictures.FILES) {
+    const i = order.indexOf(file);
+    assert.ok(i > at, `${file} comes after the one before it in the build`);
+    at = i;
+  }
+  const css = fs.readFileSync(path.join(src, 'ui/style.css'), 'utf8');
+  for (const [name, key] of [['--logo', 'head'], ['--display', 'display'], ['--body', 'body']]) assert.equal(css.match(new RegExp(`${name}: ([^;]+);`))[1], pictures.FONTS[key], name);
+  for (const [file, family] of pictures.FONT_FILES) {
+    assert.ok(fs.existsSync(path.join(src, 'fonts', file)), file);
+    assert.ok(pictures.FONTS.head.includes(family) || pictures.FONTS.display.includes(family) || pictures.FONTS.body.includes(family), family);
+  }
+  for (const licence of ['OFL-Jersey20.txt', 'OFL-PixelifySans.txt', 'OFL-VT323.txt']) assert.match(fs.readFileSync(path.join(src, 'fonts', licence), 'utf8'), /SIL Open Font License/);
+});
+
+test('the lesson on the list is the lesson in the game', () => {
+  const text = require('fs').readFileSync(path.join(src, 'ui/practice.js'), 'utf8');
+  const ids = Array.from(text.matchAll(/\bid: '([A-Za-z]+)'/g), (m) => m[1]);
+  assert.deepEqual(ids, rules.LESSON_STEPS);
+});
+
 // The game's side.
+
+test('the game counts each step once, sends them together, and never from a test browser', () => {
+  const storage = new Map();
+  const realStorage = globalThis.localStorage;
+  const realFetch = globalThis.fetch;
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => storage.set(k, v), removeItem: (k) => storage.delete(k) } });
+  const sent = [];
+  globalThis.fetch = async (url, opt) => {
+    sent.push([url, JSON.parse(opt.body).steps]);
+    return { ok: true };
+  };
+  try {
+    const c = new WW.Counter();
+    c.usable = true;
+    c.once('opened');
+    c.once('opened');
+    c.daily('active', '2026-12-01');
+    c.daily('active', '2026-12-01');
+    assert.equal(sent.length, 0, 'waits to send them together');
+    c.flush();
+    assert.deepEqual(sent.pop(), ['/api/count', ['opened', 'active']]);
+    c.flush();
+    assert.equal(sent.length, 0, 'nothing new to send');
+    // Coming back: what this browser has counted is remembered, and each day counts once.
+    const again = new WW.Counter();
+    again.usable = true;
+    again.once('opened');
+    again.daily('active', '2026-12-01');
+    again.flush();
+    assert.equal(sent.length, 0);
+    again.daily('active', '2026-12-02');
+    again.flush();
+    assert.deepEqual(sent.pop(), ['/api/count', ['active']]);
+    assert.ok(!storage.get('squeekerant-counted').includes('2026-12-01'), 'old days are not kept');
+    const off = new WW.Counter();
+    off.usable = false;
+    off.once('first_guest');
+    off.flush();
+    assert.equal(sent.length, 0, 'switched off where it cannot be sent');
+    for (const step of ['first_visit', 'connect_pressed', 'wallet_connected', 'play_pressed', 'lesson_declined', 'lesson_started', 'lesson_left', 'lesson_finished', 'opened', 'first_guest', 'first_dream', 'active', 'back_1', 'back_30', 'share_open', 'share_post', 'share_copy', 'share_save']) assert.deepEqual(rules.cleanSteps({ steps: [step] }), [step], step);
+  } finally {
+    globalThis.fetch = realFetch;
+    if (realStorage === undefined) delete globalThis.localStorage;
+    else Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: realStorage });
+  }
+});
 
 const fresh = () => new WW.Wallet();
 const rowsOf = (...list) => list.map(([wallet, total, shop]) => ({ wallet, total, shop: shop || wallet, chef: 'x', fur: 'golden', hat: 'toque', level: 5, house: 1 }));
@@ -217,6 +470,16 @@ test('your own latest score shows at once, even before the cached board catches 
   assert.equal(rows.length, 3, 'no second line for the same wallet');
   w.mine = Object.assign({}, w.mine, { total: 1, rank: 5000, everyone: 6000 });
   assert.deepEqual(w.standing(), { place: 5000, total: 6000 }, 'far down the board, the place comes from the server');
+});
+
+test('a restaurant taken off the board does not see itself on it', () => {
+  const w = fresh();
+  w.address = '0xB';
+  w.token = 't';
+  w.board = { open: true, rows: rowsOf(['0xa', 30]), total: 1 };
+  w.mine = { shop: 'Mine', chef: 'x', fur: 'golden', hat: 'toque', level: 9, house: 1, total: 40, rank: null, everyone: 1 };
+  assert.deepEqual(w.rows().map((r) => r.wallet), ['0xa']);
+  assert.equal(w.standing(), null);
 });
 
 test('scores go out soon after a level and rarely otherwise, and only from the real wheel', async () => {

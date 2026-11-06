@@ -22,8 +22,8 @@ function serveApi(req, res, pathname) {
       body = raw ? JSON.parse(raw) : null;
     } catch (e) {}
     const out = await api({ method: req.method, path: pathname, headers: req.headers, body });
-    res.writeHead(out.status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
-    res.end(JSON.stringify(out.json));
+    res.writeHead(out.status, { 'content-type': out.type || (out.html ? 'text/html; charset=utf-8' : 'application/json; charset=utf-8'), 'cache-control': 'no-store' });
+    res.end(out.body || out.html || JSON.stringify(out.json));
   });
 }
 
@@ -33,7 +33,12 @@ const server = http.createServer((req, res) => {
     res.writeHead(204);
     return res.end();
   }
-  if (pathname.startsWith('/api/')) return serveApi(req, res, pathname);
+  // The server's own pages: the API, and the links shared pictures get.
+  if (pathname.startsWith('/api/') || pathname.startsWith('/p/')) return serveApi(req, res, pathname);
+  if (pathname === '/og.png') {
+    res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
+    return fs.createReadStream(path.join(__dirname, '..', 'src', 'ui', 'og.png')).pipe(res);
+  }
   const page = PAGES[pathname];
   if (!page) {
     res.writeHead(404, { 'content-type': 'text/plain' });

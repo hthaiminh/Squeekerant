@@ -14,6 +14,7 @@
     constructor() {
       this.feed = new WW.RecordingFeed(WW.RECORDING);
       this.wallet = new WW.Wallet();
+      this.count = new WW.Counter();
       this.sfx = new WW.Sound();
       this.music = new WW.Music(this.sfx);
       this.s = null;
@@ -151,6 +152,7 @@
         );
       }
       this.walletTicket = 'list';
+      this.count.once('connect_pressed');
       const list = w.list();
       if (!list.length) {
         const here = encodeURIComponent(location.href);
@@ -177,6 +179,7 @@
           if (!done) return;
           this.walletWait = null;
           this.walletTicket = null;
+          this.count.once('wallet_connected');
           this.closeOverlay();
           this.toast(this.s && this.feed.mode === 'live' ? 'Wallet connected. Your restaurant is on the leaderboard.' : 'Wallet connected. Your restaurant joins the leaderboard as soon as it is on the real wheel.', 'good');
           this.walletChanged();
@@ -227,12 +230,14 @@
       this.panels = new WW.Panels(this);
       this.linegame = new WW.Line(this);
       this.landing = new WW.Landing(this);
+      this.share = new WW.Share(this);
       window.addEventListener('resize', () => this.fit());
       this.fit();
 
       this.landing.show();
       const saved = (data && data.save) || this.loadLocal();
       if (saved) this.useSave(saved);
+      if (!this.s) this.count.once('first_visit');
       this.landing.draw();
       this.connectLive();
       this.connectCloud();
@@ -305,6 +310,8 @@
       document.getElementById('hudWinkIcon').src = WW.iconCanvas('wink').toDataURL();
       document.getElementById('houseIcon').src = WW.iconCanvas('expand').toDataURL();
       document.getElementById('arrangeIcon').src = WW.iconCanvas('arrange').toDataURL();
+      document.getElementById('shareIcon').src = WW.iconCanvas('camera').toDataURL();
+      document.getElementById('btnShare').addEventListener('click', () => this.share.open());
       document.getElementById('btnDoor').addEventListener('click', () => this.doorButton());
       document.getElementById('btnArrange').addEventListener('click', () => {
         this.sound('tap');
@@ -338,10 +345,11 @@
       tipOf('statLevel', () => (this.s ? { title: `Restaurant level ${this.s.level}`, lines: [`${fmt(this.s.xp)} of ${fmt(E.xpNeed(this.s.level))} toward the next level.`, 'Guests, orders and upgrades all count.'] } : null));
       tipOf('btnSound', { title: 'Music and sound', lines: ['Turn music and sound on or off.'] });
       tipOf('btnWallet', () => ({ icon: WW.iconCanvas('wallet'), title: 'Wallet', lines: this.wallet.connected() ? [this.wallet.address, 'Click for your place on the leaderboard.'] : ['Connect a wallet to put your restaurant on the leaderboard.', 'You only sign a message. It costs nothing and sends no transaction.'] }));
-      tipOf('ribbon', () => ({ title: 'The Wheel', lines: [this.feed.mode === 'practice' ? 'A pretend hamster for the practice kitchen. Nothing here counts.' : this.feed.mode === 'recording' ? 'A replay of his real rounds, because the real wheel cannot be reached right now.' : 'What he is doing right now. Click for the numbers.'] }));
+      tipOf('ribbon', () => ({ title: 'The Wheel', lines: [this.feed.mode === 'practice' ? 'A pretend hamster for the practice kitchen. Nothing here counts.' : this.feed.mode === 'recording' ? 'A replay of his real rounds, because the real wheel cannot be reached right now.' : 'What he is doing right now. Click for the numbers.', ...(this.s && this.live.state === 'quiet' ? [this.dreamNote()] : [])] }));
       tipOf('houseinfo', () => this.houseTip());
       tipOf('skybadge', () => this.skyTip());
       tipOf('btnDoor', () => this.doorTip());
+      tipOf('btnShare', () => ({ icon: WW.iconCanvas('camera'), title: 'Share your restaurant', lines: ['A picture of your restaurant, ready to post or send.'] }));
       tipOf('btnArrange', () => ({ icon: WW.iconCanvas('arrange'), title: 'Arrange', lines: [this.scene.editing ? 'Click to finish.' : 'Move things around, or place something from your bag. Your furniture opens in the Kitchen.'] }));
       const world = document.getElementById('world');
       world.addEventListener('pointerdown', (e) => this.onDown(e));
@@ -924,6 +932,7 @@
       const t = this.now();
       this.tickN++;
       const adv = E.advance(s, this.feed, t);
+      if (s.stats.served > 0 && this.feed.mode === 'live' && !this.practice) this.count.once('first_guest');
       if (adv) {
         const rep = E.takeReport(s);
         this.handleReport(rep, adv.steps >= 18);
@@ -1089,7 +1098,8 @@
       const tag = this.feed.mode === 'practice' ? 'PRACTICE' : this.feed.mode === 'recording' ? 'REPLAY' : null;
       document.getElementById('ribbonState').textContent = tag && !this.visit ? `${WW.tr(tag)} · ${state}` : state;
       document.getElementById('ribbonDot').style.background = colors[live.state];
-      document.getElementById('ribbonRound').textContent = WW.tr(`Round ends ${mm}:${ss}`);
+      // While he sleeps there is nothing to bank, and the dream is what is coming.
+      document.getElementById('ribbonRound').textContent = WW.tr(live.state === 'quiet' ? this.dreamLine() : `Round ends ${mm}:${ss}`);
       this.updateHouseInfo();
       this.setBadge(document.querySelector('.tab[data-tab="kitchen"]'), s.stations.filter((st) => !st.job).length);
       this.updatePlaceBar();
@@ -1151,6 +1161,7 @@
       this.setBadge(document.getElementById('btnDoor'), inside ? E.mailCount(s) + (this.boardWaiting() ? 1 : 0) : 0);
       const arrange = document.getElementById('btnArrange');
       arrange.style.display = this.visit || this.scene.view === 'street' ? 'none' : '';
+      document.getElementById('btnShare').style.display = this.visit ? 'none' : '';
       arrange.classList.toggle('on', !!this.scene.editing);
       const sky = this.sky();
       const key = [sky.season, sky.weather, this.isAwake()].join();
@@ -1179,6 +1190,18 @@
       const hrs = s.clock.streak / 6;
       if (hrs >= 1) return `Quiet for ${hrs.toFixed(1)} hours`;
       return 'Quiet hours';
+    }
+    // What the sleep is worth so far, on the same count his dream will use.
+    dreamLine() {
+      const d = E.dreamProgress(this.s);
+      if (!d.goldIn) return 'Golden dream waiting';
+      if (!d.dreamIn) return this.desktop() ? `Dream Dish waiting, golden in ${d.goldIn.toFixed(1)} h` : `Golden dream in ${d.goldIn.toFixed(1)} h`;
+      return `Dream Dish in ${d.dreamIn.toFixed(1)} h`;
+    }
+    dreamNote() {
+      const d = E.dreamProgress(this.s);
+      const CFG = WW.CFG;
+      return `${d.hours >= 1 ? `He has slept ${d.hours.toFixed(1)} hours so far. ` : ''}When he wakes after ${CFG.DREAM_ROUNDS / 6} hours or more, every player gets the same Dream Dish, golden after ${CFG.GOLD_ROUNDS / 6} hours. Nothing can wake him, so nobody knows when.`;
     }
     jobText(st) {
       const s = this.s;
@@ -1736,21 +1759,29 @@
     actions(...buttons) {
       return el('div', { class: 'actions' }, ...buttons);
     }
-    toast(text, kind, canvas) {
+    toast(text, kind, canvas, ms = 3000) {
       const box = document.getElementById('toasts');
       const n = el('div', { class: 'toast ' + (kind || '') }, canvas ? img(canvas, '', '') : null, text);
       box.append(n);
       while (box.children.length > 3) box.firstChild.remove();
-      setTimeout(() => n.remove(), 3000);
+      setTimeout(() => n.remove(), ms);
     }
 
     // Back to a restaurant from the landing page. Whatever the clock owes is worked out on the next tick.
     afterLanding() {
+      this.noteVisit();
       this.last = performance.now();
       this.fit();
       this.updateHud();
       this.updateMusic();
       this.pumpQueue();
+    }
+    // For the counts of how many come back, by how long ago the restaurant opened. Nothing about who.
+    noteVisit() {
+      if (!this.s || this.practice) return;
+      this.count.daily('active');
+      const days = (Date.now() - this.s.created) / 86400000;
+      for (const n of [1, 3, 7, 14, 30]) if (days >= n) this.count.once('back_' + n);
     }
     showWelcome() {
       this.showTicket(
@@ -1760,6 +1791,7 @@
         this.actions(
           btn('Skip, I have played before', () => {
             this.sound('tap');
+            this.count.once('lesson_declined');
             this.showIntro();
           }, 'plain'),
           btn('Start practice', () => {
@@ -1770,6 +1802,7 @@
       );
     }
     startPractice() {
+      this.count.once('lesson_started');
       if (this.landing.open) this.landing.hide();
       new WW.Practice(this).begin();
     }
@@ -1802,6 +1835,10 @@
       this.sound('wake');
       this.afterLoad();
       this.autosave(true);
+      this.count.once('opened');
+      this.noteVisit();
+      // An empty room looks broken to someone who has just arrived, and most of the day he is asleep.
+      if (this.live.state === 'quiet') this.toast("He's asleep, so nobody comes in yet. Cook now for when he wakes.", null, WW.iconCanvas('moon'), 7000);
     }
 
     showChefEditor() {
@@ -1815,10 +1852,10 @@
         );
         this.showTicket(
           el('h2', null, 'Your head chef'),
-          el('input', { id: 'chefName', type: 'text', maxlength: 14, value: s.chef.name, 'aria-label': 'Hamster name', on: { input: (e) => { s.chef.name = e.target.value || 'Bean'; this.dirty = true; } } }),
+          el('input', { id: 'chefName', type: 'text', maxlength: 14, value: s.chef.name, 'aria-label': 'Hamster name', on: { input: (e) => { s.chef.name = e.target.value.trim() || 'Bean'; this.dirty = true; } } }),
           el('div', { class: 'sec' }, el('h3', null, 'Fur'), el('div', { class: 'swatches' }, furs)),
           el('div', { class: 'sec' }, el('h3', null, 'Hat (more come with levels)'), el('div', { class: 'swatches' }, hats)),
-          el('div', { class: 'sec' }, el('h3', null, 'Restaurant name'), el('input', { id: 'shopName', type: 'text', maxlength: 22, value: s.shop, 'aria-label': 'Restaurant name', on: { input: (e) => { s.shop = e.target.value || 'The Tiny Table'; this.dirty = true; } } })),
+          el('div', { class: 'sec' }, el('h3', null, 'Restaurant name'), el('input', { id: 'shopName', type: 'text', maxlength: 22, value: s.shop, 'aria-label': 'Restaurant name', on: { input: (e) => { s.shop = e.target.value.trim() || WW.tr('The Tiny Table'); this.dirty = true; } } })),
           this.actions(btn('Done', () => { this.closeOverlay(); this.panels.render(); }))
         );
       };
@@ -1854,10 +1891,18 @@
       this.sound('bank');
     }
 
-    showDream(d) {
+    // again: back from sharing it, without the fanfare.
+    showDream(d, again) {
       const def = E.dishDef(d.key);
       const hrs = (d.sleptRounds / 6).toFixed(1);
-      this.sound('dream');
+      if (!again) this.sound('dream');
+      if (!this.practice) this.count.once('first_dream');
+      // Sharing opens over the card, and closing the picture brings the card back with its Cook button.
+      const share = () => {
+        if (this.share.busy) return;
+        this.queue.unshift(() => this.showDream(d, true));
+        this.share.open();
+      };
       const s = this.s;
       this.showTicket(
         { ticketClass: 'dreamcard' },
@@ -1867,7 +1912,7 @@
         el('p', null, def.gold ? 'A golden dream, which only comes after 15 hours of sleep or more. It sells for twice as much.' : 'Every player sees this same dream, picked by the hash of the round he woke on.'),
         el('p', { class: 'note', style: 'margin-top:6px' }, `Cook it ${def.st === 'pot' ? 'in the pot' : 'on the ' + def.st} for ${WW.CFG.DREAM_DISH_COST} Winks until his next long sleep. Legendary guests only come for dream dishes.`),
         s.critic.hints.length ? el('p', { class: 'note', style: 'margin-top:6px' }, `Also in the dream: ${s.critic.hints[s.critic.hints.length - 1]}`) : null,
-        this.actions(btn('Good morning', () => this.closeOverlay(), 'plain'), btn('Cook it', () => { this.closeOverlay(); this.panels.cookDreamNow(); }, 'lilac'))
+        this.actions(this.practice ? null : btn('Share', share, 'plain'), btn('Good morning', () => this.closeOverlay(), 'plain'), btn('Cook it', () => { this.closeOverlay(); this.panels.cookDreamNow(); }, 'lilac'))
       );
     }
 
@@ -1920,6 +1965,8 @@
       if (this.cloudDoc) this.cloudDoc.delete().catch(() => {});
       this.s = null;
       this.visit = null;
+      // Cards still waiting belong to the restaurant that is gone.
+      this.queue = [];
       this.scene.reset();
       this.scene.fading = null;
       if (this.feed.mode === 'held') this.feed = new WW.RecordingFeed(WW.RECORDING);

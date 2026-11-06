@@ -4,6 +4,37 @@
   const { el, btn, img } = WW;
   const E = () => WW.Engine;
 
+  // A stand in for the game that only looks: a second camera on the same world, for the landing page.
+  WW.standIn = (game, save) => ({
+    visit: null,
+    speed: 1,
+    // Only ever looks. Nobody works in the restaurant from out here.
+    still: true,
+    hasMouse: true,
+    get s() {
+      return save();
+    },
+    get live() {
+      return game.live;
+    },
+    get feed() {
+      return game.feed;
+    },
+    isService: () => game.isService(),
+    isAwake: () => game.isAwake(),
+    sky: () => game.sky(),
+    now: () => game.now(),
+    desktop: () => game.desktop(),
+    streetLots: () => [],
+    nextTarget: () => null,
+    boardWaiting: () => false,
+    topRanks: () => game.topRanks(),
+    ranksNote: () => game.ranksNote(),
+    treeReady: () => false,
+    sound() {},
+    onNewSpecies() {},
+  });
+
   class Landing {
     constructor(game) {
       this.game = game;
@@ -18,36 +49,7 @@
       this.statusKey = null;
       // The woods are drawn by the game's own scene. It looks at this stand in for the game: the same hamster,
       // the same season, and your own restaurant when you have one.
-      const landing = this;
-      this.stage = {
-        visit: null,
-        speed: 1,
-        // Only ever looks. Nobody works in the restaurant from out here.
-        still: true,
-        hasMouse: true,
-        get s() {
-          return game.s || landing.demoSave();
-        },
-        get live() {
-          return game.live;
-        },
-        get feed() {
-          return game.feed;
-        },
-        isService: () => game.isService(),
-        isAwake: () => game.isAwake(),
-        sky: () => game.sky(),
-        now: () => game.now(),
-        desktop: () => game.desktop(),
-        streetLots: () => [],
-        nextTarget: () => null,
-        boardWaiting: () => false,
-        topRanks: () => game.topRanks(),
-        ranksNote: () => game.ranksNote(),
-        treeReady: () => false,
-        sound() {},
-        onNewSpecies() {},
-      };
+      this.stage = WW.standIn(game, () => game.s || this.demoSave());
       this.scene = null;
       window.addEventListener('resize', () => {
         if (this.open) this.fit();
@@ -129,11 +131,21 @@
       const g = this.game;
       const live = g.feed.mode === 'live';
       const state = live ? g.live.state : null;
-      if (state === this.statusKey) return;
-      this.statusKey = state;
-      const words = { running: 'Squeektoshi is running right now.', breather: 'Squeektoshi is catching his breath.', quiet: 'Squeektoshi is resting right now.' }[state];
+      // Only changes when a round settles.
+      const settled = live ? g.feed.settled(g.now()) : 0;
+      const key = state + ':' + settled;
+      if (key === this.statusKey) return;
+      this.statusKey = key;
+      const words = { running: 'Squeektoshi is running right now.', breather: 'Squeektoshi is catching his breath.', quiet: this.sleepWords(state === 'quiet' && g.feed.quietUpTo ? g.feed.quietUpTo(settled) : 0) }[state];
       const dots = { running: 'var(--leaf)', breather: 'var(--butter)', quiet: 'var(--lilac)' }[state];
       this.status.replaceChildren(...(words ? [el('span', { class: 'dot', style: `background:${dots}` }), el('span', null, words)] : []));
+    }
+    sleepWords(rounds) {
+      const CFG = WW.CFG;
+      if (rounds < CFG.NAP_ROUNDS) return 'Squeektoshi is resting right now.';
+      const asleep = `Squeektoshi has been asleep for ${(rounds / 6).toFixed(1)} hours.`;
+      if (rounds >= CFG.GOLD_ROUNDS) return `${asleep} A golden dream is on its way.`;
+      return rounds >= CFG.DREAM_ROUNDS ? `${asleep} His dream is on its way.` : asleep;
     }
     // Comes back on every change of the wallet, so it only rebuilds when something shows differently.
     draw() {
@@ -177,6 +189,7 @@
         return g.afterLanding();
       }
       this.root.classList.add('bare');
+      g.count.once('play_pressed');
       g.showWelcome();
     }
   }

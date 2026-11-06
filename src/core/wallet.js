@@ -146,7 +146,8 @@
       const rows = this.board ? this.board.rows.slice() : [];
       const me = this.address && this.address.toLowerCase();
       const at = rows.findIndex((r) => String(r.wallet).toLowerCase() === me);
-      if (this.mine) {
+      // A restaurant taken off the board has no place, so it does not see itself on it either.
+      if (this.mine && this.mine.rank !== null) {
         const fresh = Object.assign({}, this.mine, { wallet: this.address });
         if (at >= 0) rows.splice(at, 1);
         let place = rows.findIndex((r) => r.total < fresh.total);

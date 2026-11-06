@@ -18,6 +18,8 @@ Live at https://www.squeekerant.online. The restaurant runs in the browser. A sm
 
 Nothing can wake him or ask him to run, and food never spoils, in line with his [care policy](https://docs.squeekchain.com/system/squeektoshi.md).
 
+A restaurant that opens in the middle of a sleep counts the whole sleep so far, read back from the wheel, so its first morning brings the same dream as everyone else's. While he sleeps the ribbon over the room shows how far the sleep has come: hours until a Dream Dish, then hours until it turns golden. The landing page says how long he has been asleep.
+
 The daily question on the notice board sometimes asks about his last full day. A day is counted the way the official stats count it, 12:00 to 12:00 UTC, so it holds one whole run. The answers are ranges, and it is only asked on the real wheel once every round of that day has been read. The recording asks something else.
 
 ## Inside, outside and the street
@@ -54,6 +56,26 @@ The landing page comes first on every visit: the name, drawn by hand in `src/art
 
 Anyone with no restaurant is offered the practice kitchen before naming one, and can skip it. It is a throwaway save on the real rules and the real screens, run by `PracticeFeed`, a pretend hamster the lesson tells when to run and sleep and how fast time goes. A coach (`src/ui/practice.js`) walks through 26 steps and a ring marks what to press. Nothing there is saved or sent to the board, and a real restaurant is put aside and comes back as it was. How To Play, the sixth tab, has everything in short and can open the practice kitchen again.
 
+## Showing it off
+
+The camera button next to Arrange paints a picture of your restaurant (`src/ui/share.js`): your building in the woods as they look this hour, the room as it is right now in a frame, and a ticket with the name, the head chef, the level, guests fed, kinds met, rating, house level, his latest dream and the rarest guests met. Everything on it comes from the save and the engine's own sums, painted by the game's own painters. A phone sends the picture itself to the share sheet. It can also be saved or copied. The Dream Dish card has the same button. The Artifact preview shows the picture but cannot share it.
+
+X cannot take a picture through a link, so Post on X gives the picture a link of its own, `/p/<id>`, and X shows that link as a large picture in the post. Discord and Telegram show it the same way. What goes to the server is never an image: the game first writes the picture down as plain data (the save's pieces and where everyone stands), checks it with `cleanPicture`, and paints that. The server runs the same check on what it gets, puts both names through the leaderboard's rules, writes in the real board for the sign outside, and paints the picture itself with the same painters (`server/picture.js`, on `@napi-rs/canvas` with the three fonts in `src/fonts`). So nothing on a picture can be anything but the game's own pieces and a name the board would take. The same picture always gets the same link.
+
+The data is kept in the `pictures` table (id, when, data), with nothing about who made it. Only the newest 20,000 are kept, an address can make 20 an hour and the whole site 2,000 a day. An address with no picture behind it still opens and shows the game's own preview. The picture for a link never changes, so it is cached for good. If the server cannot make a link, the post links the site instead and the game says so.
+
+## The link preview
+
+A link to the site shows a picture and a line of text on X, Discord and Telegram. `scripts/build.js` writes the tags into the page head, and the picture is `src/ui/og.png`, 1200 by 630, painted from the game itself: a dressed level 24 restaurant on a spring day with him running. The build copies it next to the page, and the public build stops if it is missing.
+
+## Counts
+
+To see how far people get, the game counts a few steps: opening the page for the first time, connecting a wallet, starting, finishing or leaving the practice kitchen and each of its steps, opening a real restaurant, a first real guest, a first Dream Dish, playing today, still coming back after 1, 3, 7, 14 and 30 days, and using the share picture. The full list is in `server/rules.js`, and nothing else is stored.
+
+Only a number per step per day reaches the server, in the `counts` table (day, step, n). There is no address, no name, no cookie and nothing kept about the request. The browser keeps a short list under `squeekerant-counted` of what it has already counted, so each browser counts each step once (playing today once a day), and it sends what it has in one small request, so a visit wakes the database once at most. Browsers run by a program, test browsers included, and the Artifact preview never count.
+
+Read them at https://www.squeekerant.online/api/stats, a table of the last 14 days, or as JSON at `/api/counts`. Both are cached for five minutes. Anyone could send counts by hand, so they show trends and are never a reason to pay anyone. One address can send 60 an hour, counted in memory only, so a flood cannot keep the database awake all month.
+
 ## The leaderboard and wallets
 
 The board lists only restaurants whose owner connected a wallet, ranked by restaurant level, then progress toward the next one, then who got there first. Nothing else is on it, so an empty board is simply empty. A wallet keeps its best restaurant, so starting again takes nobody off the board.
@@ -87,22 +109,23 @@ node tests/sim.js  # a bot plays 30 days on his real rounds and prints prices an
 npm run recording  # refreshes src/data/recording.js from the API and SqueekCore
 ```
 
-The game itself needs nothing installed. The leaderboard's server needs `npm install` once, and `npm start` runs a local one that keeps its board in memory until you stop it. With network access the game follows the real wheel, so while he sleeps nobody comes in. A restaurant that follows the real wheel waits while the wheel can't be reached, shows no signal and catches up afterwards, it is never mixed with the recording. A new restaurant with no network, as in an Artifact, replays the recording in `src/data/recording.js` on a loop that keeps the time of day, and moves to the real wheel if the network comes back.
+The game itself needs nothing installed. The leaderboard's server needs `npm install` once, and again after a new package such as the picture painter, and `npm start` runs a local one that keeps its board and pictures in memory until you stop it. With network access the game follows the real wheel, so while he sleeps nobody comes in. A restaurant that follows the real wheel waits while the wheel can't be reached, shows no signal and catches up afterwards, it is never mixed with the recording. A new restaurant with no network, as in an Artifact, replays the recording in `src/data/recording.js` on a loop that keeps the time of day, and moves to the real wheel if the network comes back.
 
 ## Going live
 
-`vercel deploy --prod` from this folder. `vercel.json` builds `public/index.html`, the only file visitors get, and serves `api/index.js` as one function. `dist/vi` is only for testing and never goes up.
+`vercel deploy --prod` from this folder. `vercel.json` builds `public/index.html`, the only file visitors get, and serves `api/index.js` as one function for `/api/` and the picture links under `/p/`. The function carries `src` with it, for painting pictures. `dist/vi` is only for testing and never goes up.
 
 The board needs a Postgres database, its address in the `DATABASE_URL` setting on Vercel, and one more deploy to pick it up. The tables make themselves. Until then the game says the board is not open yet, and everything else works.
 
 ## Layout
 
-- `src/core`: rules (`engine.js`), data sources including the practice kitchen's pretend hamster (`feed.js`), the wallet and the board (`wallet.js`), seeded random numbers.
+- `src/core`: rules (`engine.js`), data sources including the practice kitchen's pretend hamster (`feed.js`), the wallet and the board (`wallet.js`), the anonymous counts (`counter.js`), seeded random numbers.
 - `src/data`: guests, food, decor, the world outside with its seasons and weather, the recording.
 - `src/art`: pixel painters, nothing is an image file. `houses.js` paints every building part.
-- `src/ui`: the landing page, the canvas world with its three places and camera, panels, the carousel game, the practice kitchen, sound and music, start up.
+- `src/ui`: the landing page, the canvas world with its three places and camera, panels, the carousel game, the practice kitchen, the share picture, sound and music, start up. `og.png` is the link preview picture.
 - `src/lang`: the Vietnamese test build, left out of the plain build.
-- `server`, `api`: the leaderboard's server, sign in and the rules for a score.
+- `src/fonts`: the page's three fonts, for the server's pictures, each with its SIL Open Font License.
+- `server`, `api`: the leaderboard's server, sign in, the rules for a score, the counts and the shared pictures.
 
 ## Not built yet
 

@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
   } catch (e) {}
   const out = await handle({ method: req.method, path: pathname, headers: req.headers, body });
   res.statusCode = out.status;
-  res.setHeader('content-type', 'application/json; charset=utf-8');
+  res.setHeader('content-type', out.type || (out.html ? 'text/html; charset=utf-8' : 'application/json; charset=utf-8'));
   res.setHeader('cache-control', out.cache || 'no-store');
-  res.end(JSON.stringify(out.json));
+  res.end(out.body || out.html || JSON.stringify(out.json));
 };

@@ -26,6 +26,43 @@ function xpCeiling(now) {
   return CEILING_BASE + (Math.max(0, now - LAUNCH) / DAY) * CEILING_PER_DAY;
 }
 
+// What the game may count, in the order a person gets there, with what each one means. Only these reach the database.
+// The practice kitchen's steps follow the lesson in src/ui/practice.js. A test keeps them equal.
+const LESSON_STEPS = ['wheel', 'stove', 'stoveWait', 'run', 'guests', 'till', 'wok', 'wokWait', 'line', 'pot', 'sleep', 'night', 'dream', 'door', 'tree', 'market', 'board', 'shop', 'ranks', 'street', 'house', 'clean', 'trade', 'arrange', 'recipes', 'howto'];
+const COUNT_LABELS = [
+  ['first_visit', 'Opened the page for the first time'],
+  ['connect_pressed', 'Looked at connecting a wallet'],
+  ['wallet_connected', 'Connected a wallet'],
+  ['play_pressed', 'Pressed play with no restaurant yet'],
+  ['lesson_declined', 'Skipped the practice kitchen at the start'],
+  ['lesson_started', 'Started the practice kitchen'],
+  ...LESSON_STEPS.map((id, i) => ['lesson_' + id, `Lesson step ${i + 1}: ${id}`]),
+  ['lesson_left', 'Left the practice kitchen before the end'],
+  ['lesson_finished', 'Finished the practice kitchen'],
+  ['opened', 'Opened a real restaurant'],
+  ['first_guest', 'Served a first real guest'],
+  ['first_dream', 'Got a first Dream Dish'],
+  ['active', 'Played today'],
+  ['back_1', 'Still coming back after 1 day'],
+  ['back_3', 'Still coming back after 3 days'],
+  ['back_7', 'Still coming back after 7 days'],
+  ['back_14', 'Still coming back after 14 days'],
+  ['back_30', 'Still coming back after 30 days'],
+  ['share_open', 'Opened the share picture'],
+  ['share_post', 'Pressed post or share'],
+  ['share_copy', 'Copied the picture'],
+  ['share_save', 'Saved the picture'],
+];
+const COUNT_STEPS = new Set(COUNT_LABELS.map(([step]) => step));
+const MOST_STEPS = 60;
+
+// One request may carry several steps. Each counts once, and anything else is ignored rather than stored.
+function cleanSteps(body) {
+  const list = body && body.steps;
+  if (!Array.isArray(list) || list.length > MOST_STEPS) return { error: 'That is not a list of steps.' };
+  return Array.from(new Set(list.filter((step) => typeof step === 'string' && COUNT_STEPS.has(step))));
+}
+
 // Names go on a public board. No links, no markup, nothing that flips or hides text.
 const LINKS = /https?:|www\.|t\.me|discord|@|\.(com|net|org|io|xyz|me|gg|app|online|site|link|ru|cn|top|fun|tv)\b/i;
 function cleanName(value, fallback, max) {
@@ -62,4 +99,7 @@ function cleanScore(body, now) {
   };
 }
 
-module.exports = { xpNeed, totalXp, xpCeiling, cleanName, cleanScore, LAUNCH, MAX_LEVEL, MAX_HOUSE };
+module.exports = {
+  COUNT_LABELS,
+  LESSON_STEPS,
+  cleanSteps, xpNeed, totalXp, xpCeiling, cleanName, cleanScore, LAUNCH, MAX_LEVEL, MAX_HOUSE };

@@ -369,6 +369,109 @@ test('the wheel running today connects even while /core says its indexer is unav
   }
 });
 
+// A feed that has read every round, like the real ones. rounds[i] is the work in round i+1.
+function feedWithHistory(rounds, readFrom = 0) {
+  const feed = feedOf(rounds);
+  feed.quietUpTo = (r) => {
+    let n = 0;
+    for (let q = r; q > readFrom; q--) {
+      const info = feed.round(q);
+      if (info.unknown) continue;
+      if (info.work > 0) break;
+      n++;
+    }
+    return n;
+  };
+  return feed;
+}
+const openAt = (feed, round) => {
+  const s = E.newGame(round * ROUND, feed);
+  s.away = { fromRound: 0, toRound: 0, active: 0, quiet: 0, unknown: 0, work: 0, served: 0, earned: 0, soldOut: 0, full: 0, tired: 0, newSpecies: [], rares: [], winkGain: 0, dreams: [], naps: 0, jobs: [], levels: 0, festival: null, verdict: null };
+  return s;
+};
+
+test('a restaurant that opens during a long sleep gets the same dream as one that was open all along', () => {
+  // He runs, sleeps 14 hours, runs again.
+  const rounds = [100, ...new Array(84).fill(0), 100];
+  const feed = feedWithHistory(rounds);
+  const wake = rounds.length * ROUND;
+  const before = openAt(feed, 1);
+  E.advance(before, feed, wake);
+  assert.ok(before.dreamDish, 'the one that was open all along dreamed');
+  for (const hoursIn of [2, 5, 8, 10, 13.5]) {
+    const during = openAt(feed, 1 + hoursIn * 6);
+    assert.equal(during.clock.streak, hoursIn * 6, 'it counts the sleep so far');
+    E.advance(during, feed, wake);
+    assert.deepEqual(during.dreamDish, before.dreamDish, hoursIn + ' hours in');
+  }
+});
+
+test('a sleep that opens a restaurant is only counted back to where he last ran', () => {
+  const feed = feedWithHistory([100, 0, 0, 50, 0, 0, 0]);
+  assert.equal(openAt(feed, 7).clock.streak, 3);
+  assert.equal(openAt(feed, 4).clock.streak, 0, 'he ran in the last round');
+  // A short nap does not become a dream, whatever the restaurant saw of it.
+  const s = openAt(feedWithHistory([100, ...new Array(30).fill(0), 100]), 20);
+  const short = feedWithHistory([100, ...new Array(30).fill(0), 100]);
+  E.advance(s, short, 32 * ROUND);
+  assert.equal(s.dreamDish, null);
+});
+
+test('a missing record neither adds to a sleep nor breaks it', () => {
+  const quiet = new Array(30).fill(0);
+  const feed = feedWithHistory([100, ...quiet, null, null, ...quiet, 100]);
+  const open = openAt(feed, 1);
+  E.advance(open, feed, 64 * ROUND);
+  const late = feedWithHistory([100, ...quiet, null, null, ...quiet]);
+  const during = openAt(late, 63);
+  assert.equal(during.clock.streak, 60, 'the same count the rules arrive at');
+  assert.ok(open.dreamDish, 'the rules count across the gap too');
+  assert.equal(open.dreamDish.sleptRounds, 60);
+});
+
+test('rounds nobody has read yet are not taken for sleep', () => {
+  const feed = feedWithHistory(new Array(100).fill(0), 90);
+  assert.equal(openAt(feed, 100).clock.streak, 10, 'only as far back as was read');
+  const noHistory = feedOf(new Array(100).fill(0));
+  assert.equal(openAt(noHistory, 100).clock.streak, 0, 'a feed that keeps no history starts from nothing');
+});
+
+test('every real feed answers how long he has been quiet, and the practice hamster does not', () => {
+  const status = { measurement: { freshness: 'online', coreStatus: 'IDLE', rpmMilli: 0, cumulativeWorkUnits: '100' } };
+  const live = new WW.LiveFeed({ genesis: 0, core: '0x0', rpc: '', status, settled: 20, work: 100 });
+  assert.equal(live.quietUpTo(20), 0, 'nothing read yet, so nothing is known');
+  live.readFrom = 5;
+  live.roundsKnown.set(8, { r: 8, work: 40, cum: 100, hash: 'aa', unknown: false });
+  assert.equal(live.quietUpTo(20), 12, 'back to the round with work');
+  live.roundsKnown.delete(8);
+  assert.equal(live.quietUpTo(20), 15, 'and no further back than was read');
+  assert.equal(new WW.PracticeFeed().quietUpTo, undefined, 'the lesson decides when its hamster dreams');
+  const rec = { genesis: 0, startRound: 1, length: 12, firstPassMs: 0, gaps: '', rounds: [[1, 10, 'a'], [8, 10, 'b']], unknown: [10] };
+  const replay = new WW.RecordingFeed(rec);
+  assert.equal(replay.quietUpTo(12), 3, 'rounds 12, 11 and 9, with round 10 missing');
+  assert.equal(new WW.HeldFeed(rec, { round: 5, cum: 0, hash: 'x', guestN: 0 }).quietUpTo(5), 0);
+});
+
+test('moving to another wheel counts the sleep under way there', () => {
+  const s = openAt(feedWithHistory([50, 50]), 2);
+  const there = feedWithHistory([100, ...new Array(70).fill(0)]);
+  E.moveToFeed(s, there, 71 * ROUND);
+  assert.equal(s.clock.streak, 70);
+  E.advance(s, feedWithHistory([100, ...new Array(70).fill(0), 100]), 72 * ROUND);
+  assert.ok(s.dreamDish);
+});
+
+test('the coming dream is read from the same count the dream uses', () => {
+  const s = openAt(feedOf([0]), 0);
+  s.clock.streak = 18;
+  assert.deepEqual(E.dreamProgress(s), { hours: 3, dreamIn: 7, goldIn: 12 });
+  s.clock.streak = WW.CFG.DREAM_ROUNDS;
+  assert.equal(E.dreamProgress(s).dreamIn, 0);
+  assert.equal(E.dreamProgress(s).goldIn, 5);
+  s.clock.streak = 200;
+  assert.deepEqual([E.dreamProgress(s).dreamIn, E.dreamProgress(s).goldIn], [0, 0]);
+});
+
 test('a restaurant crosses to a redeployed wheel with everything it has', () => {
   require(path.join(src, 'core/feed.js'));
   const s = fresh(feedOf([0]));
@@ -915,6 +1018,23 @@ test('a very long absence does not replay every guest it missed', () => {
   E.advance(s, feed, ROUND * (144 * 30));
   assert.equal(s.clock.round, 144 * 30);
   assert.equal(s.clock.guestN, Math.floor(s.clock.cum / 10));
+});
+
+test('back after weeks away during a long sleep, the dream is the same as everyone gets', () => {
+  // A month of running, then a 12 hour sleep that is still going when the player comes back, then he wakes.
+  const days = 30;
+  const rounds = [...new Array(144 * days).fill(100), ...new Array(72).fill(0), 100];
+  const feed = feedWithHistory(rounds);
+  const away = fresh(feed);
+  E.advance(away, feed, ROUND * (144 * days + 72));
+  assert.equal(away.clock.streak, 72, 'the sleep going on now counts in full');
+  const stayed = fresh(feed);
+  for (let r = 144; r <= 144 * days + 72; r += 144) E.advance(stayed, feed, ROUND * r);
+  E.advance(stayed, feed, ROUND * (144 * days + 72));
+  E.advance(away, feed, ROUND * rounds.length);
+  E.advance(stayed, feed, ROUND * rounds.length);
+  assert.ok(stayed.dreamDish, 'the one who kept playing dreamed');
+  assert.deepEqual(away.dreamDish, stayed.dreamDish);
 });
 
 test('two recipes with the same ingredients can both be found', () => {

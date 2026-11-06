@@ -3,7 +3,13 @@
   "installCommand": "npm ci --omit=dev",
   "buildCommand": "node scripts/build.js public",
   "outputDirectory": "public",
-  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }],
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/p/(.*)", "destination": "/api/index" }
+  ],
+  "functions": {
+    "api/index.js": { "includeFiles": "src/**" }
+  },
   "headers": [
     {
       "source": "/(.*)",

@@ -1,6 +1,7 @@
 // Where the board is kept. In the cloud it is Postgres. On this computer `npm start` keeps it in memory.
 const dayOf = (now) => new Date(now).toISOString().slice(0, 10);
 const BOARD_SIZE = 100;
+const DAY_MS = 86400000;
 
 const TABLES = [
   `CREATE TABLE IF NOT EXISTS players (
@@ -26,7 +27,23 @@ const TABLES = [
     total_xp bigint NOT NULL,
     PRIMARY KEY (wallet, day)
   )`,
+  // How far people get: one number per step per day. Nothing here says who.
+  `CREATE TABLE IF NOT EXISTS counts (
+    day date NOT NULL,
+    step text NOT NULL,
+    n bigint NOT NULL,
+    PRIMARY KEY (day, step)
+  )`,
+  // Shared pictures, kept as the plain data they are painted from. Nothing here says who made them.
+  `CREATE TABLE IF NOT EXISTS pictures (
+    id text PRIMARY KEY,
+    made timestamptz NOT NULL,
+    pic jsonb NOT NULL
+  )`,
+  'CREATE INDEX IF NOT EXISTS pictures_made ON pictures (made)',
 ];
+// Only the newest pictures are kept. An older link still opens, with the game's own picture.
+const KEEP_PICTURES = 20000;
 
 // `query(text, params)` runs one statement and gives back its rows.
 function sqlStore(query) {
@@ -83,6 +100,38 @@ function sqlStore(query) {
         total: Number(place[0].everyone),
       };
     },
+    // The steps have been cleaned and are all different, which one statement needs.
+    async addCounts(steps, now) {
+      await prepare();
+      await query(
+        `INSERT INTO counts (day, step, n)
+         SELECT $1::date, value, 1 FROM jsonb_array_elements_text($2::jsonb)
+         ON CONFLICT (day, step) DO UPDATE SET n = counts.n + 1`,
+        [dayOf(now), JSON.stringify(steps)]
+      );
+    },
+    async counts(now, days) {
+      await prepare();
+      const rows = await query(`SELECT to_char(day, 'YYYY-MM-DD') AS day, step, n FROM counts WHERE day >= $1::date ORDER BY day, step`, [dayOf(now - (days - 1) * DAY_MS)]);
+      return rows.map((r) => ({ day: r.day, step: r.step, n: Number(r.n) }));
+    },
+    async savePicture(id, pic, now) {
+      await prepare();
+      await query('INSERT INTO pictures (id, made, pic) VALUES ($1, $2, $3::jsonb) ON CONFLICT (id) DO NOTHING', [id, new Date(now).toISOString(), JSON.stringify(pic)]);
+      await query(`DELETE FROM pictures WHERE made < (SELECT made FROM pictures ORDER BY made DESC OFFSET ${KEEP_PICTURES - 1} LIMIT 1)`, []);
+    },
+    async picture(id) {
+      await prepare();
+      const rows = await query('SELECT pic FROM pictures WHERE id = $1', [id]);
+      if (!rows.length) return null;
+      const pic = rows[0].pic;
+      return typeof pic === 'string' ? JSON.parse(pic) : pic;
+    },
+    async picturesToday(now) {
+      await prepare();
+      const rows = await query('SELECT count(*) AS n FROM pictures WHERE made >= $1::date', [dayOf(now)]);
+      return Number(rows[0].n);
+    },
     async board() {
       await prepare();
       const rows = await query(
@@ -101,10 +150,42 @@ function sqlStore(query) {
 
 function memoryStore() {
   const players = new Map();
+  const counted = new Map();
+  const pictures = new Map();
   const sorted = () => Array.from(players.values()).filter((p) => !p.hidden).sort((a, b) => b.total - a.total || a.reachedAt - b.reachedAt);
   return {
     open: true,
     players,
+    pictures,
+    async savePicture(id, pic, now) {
+      if (!pictures.has(id)) pictures.set(id, { made: now, pic: JSON.parse(JSON.stringify(pic)) });
+      while (pictures.size > KEEP_PICTURES) pictures.delete(pictures.keys().next().value);
+    },
+    async picture(id) {
+      const p = pictures.get(id);
+      return p ? JSON.parse(JSON.stringify(p.pic)) : null;
+    },
+    async picturesToday(now) {
+      const from = Date.parse(dayOf(now));
+      let n = 0;
+      for (const p of pictures.values()) if (p.made >= from) n++;
+      return n;
+    },
+    async addCounts(steps, now) {
+      for (const step of steps) {
+        const key = dayOf(now) + ' ' + step;
+        counted.set(key, (counted.get(key) || 0) + 1);
+      }
+    },
+    async counts(now, days) {
+      const from = dayOf(now - (days - 1) * DAY_MS);
+      const rows = [];
+      for (const [key, n] of counted) {
+        const [day, step] = key.split(' ');
+        if (day >= from) rows.push({ day, step, n });
+      }
+      return rows.sort((a, b) => a.day.localeCompare(b.day) || a.step.localeCompare(b.step));
+    },
     async saveScore(wallet, score, now) {
       const p = players.get(wallet);
       if (!p) players.set(wallet, Object.assign({ wallet, firstSeen: now, lastSeen: now, reachedAt: now, hidden: false, days: { [dayOf(now)]: score.total } }, score));
@@ -138,4 +219,4 @@ function cloudStore(url) {
   });
 }
 
-module.exports = { sqlStore, memoryStore, cloudStore, closedStore, BOARD_SIZE };
+module.exports = { sqlStore, memoryStore, cloudStore, closedStore, BOARD_SIZE, KEEP_PICTURES };

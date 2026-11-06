@@ -1,14 +1,26 @@
 // The small server behind the leaderboard: proving you own a wallet, taking a score, and reading the board.
 // Signing in only ever asks the wallet to sign a message. There is no fee and no transaction.
 const crypto = require('crypto');
-const { cleanScore } = require('./rules');
+const { cleanScore, cleanSteps, COUNT_LABELS } = require('./rules');
 
 const TICKET_MS = 5 * 60000;
 const SESSION_MS = 60 * 86400000;
 const BOARD_CACHE = 'public, max-age=30, s-maxage=300, stale-while-revalidate=600';
 const CLOSED_CACHE = 'public, max-age=30, s-maxage=60';
+const COUNTS_CACHE = 'public, max-age=60, s-maxage=300';
+const COUNT_DAYS = 14;
 const PUBLIC_HOSTS = ['www.squeekerant.online', 'squeekerant.online', 'squeekerant.vercel.app'];
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1)(:\d+)?$/;
+// A picture's link and the picture itself. The picture for an address never changes, so it may be kept for good.
+const PICTURE_PATH = /^\/p\/([A-Za-z0-9_-]{12})(\.png)?$/;
+const PICTURE_CACHE = 'public, max-age=31536000, s-maxage=31536000, immutable';
+const PICTURE_PAGE_CACHE = 'public, max-age=300, s-maxage=86400';
+const NO_PICTURE_CACHE = 'public, max-age=60, s-maxage=300';
+// Enough for anyone sharing or playing, and a ceiling on what a flood could cost the database.
+const PICTURES_PER_HOUR = 20;
+const PICTURES_PER_DAY = 2000;
+const COUNTS_PER_HOUR = 60;
+const HOUR_MS = 3600000;
 
 class Refusal extends Error {
   constructor(status, message) {
@@ -18,6 +30,20 @@ class Refusal extends Error {
 }
 
 const b64 = (data) => Buffer.from(data).toString('base64url');
+
+// A plain table for looking at by hand. Everything in it comes from the fixed list of steps, so there is nothing to escape.
+function countsPage(rows, now) {
+  const days = [];
+  for (let i = COUNT_DAYS - 1; i >= 0; i--) days.push(new Date(now - i * 86400000).toISOString().slice(0, 10));
+  const at = new Map(rows.map((r) => [r.day + ' ' + r.step, r.n]));
+  const head = days.map((d) => `<th>${d.slice(5)}</th>`).join('');
+  const lines = COUNT_LABELS.map(([step, label]) => {
+    const cells = days.map((d) => at.get(d + ' ' + step) || 0);
+    const total = cells.reduce((a, b) => a + b, 0);
+    return `<tr><td class="l">${label}</td>${cells.map((n) => `<td>${n || ''}</td>`).join('')}<td><b>${total}</b></td></tr>`;
+  }).join('');
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Squeekerant counts</title><style>body{font:15px/1.3 system-ui,sans-serif;margin:16px;color:#3a2340;background:#fff8e8}h1{font-size:20px;margin:0 0 4px}p{margin:0 0 12px}table{border-collapse:collapse}th,td{padding:3px 8px;text-align:right;border-bottom:1px solid #f0d6a3;white-space:nowrap}.l{text-align:left}div{overflow-x:auto}</style></head><body><h1>Squeekerant counts</h1><p>How many browsers reached each step, per day (UTC), for the last ${COUNT_DAYS} days. Numbers only, nothing about who. Anyone could push these up, so never pay anything on them.</p><div><table><tr><th class="l">Step</th>${head}<th>Total</th></tr>${lines}</table></div></body></html>`;
+}
 
 function createApp({ store, secret, local = false, clock = Date.now }) {
   const sign = (kind, data) => {
@@ -46,6 +72,50 @@ function createApp({ store, secret, local = false, clock = Date.now }) {
   const needsBoard = () => {
     if (!store.open) throw new Refusal(503, 'The leaderboard is not open yet.');
   };
+  // Where links on this site start, for whoever asks. Anywhere unknown gets the real site.
+  const originOf = (headers) => {
+    const host = String(headers.host || '').toLowerCase();
+    if (PUBLIC_HOSTS.includes(host)) return 'https://' + host;
+    if (local && LOCAL_HOST.test(host)) return 'http://' + host;
+    return 'https://' + PUBLIC_HOSTS[0];
+  };
+  // A count per address for the current hour, only in memory. Nothing about it is kept anywhere.
+  const limiter = (most) => {
+    const tries = new Map();
+    return (headers) => {
+      const who = String(headers['x-real-ip'] || String(headers['x-forwarded-for'] || '').split(',')[0] || 'here').trim();
+      const hour = Math.floor(clock() / HOUR_MS);
+      if (tries.size > 5000) for (const [k, v] of tries) if (v.hour !== hour) tries.delete(k);
+      const t = tries.get(who);
+      if (!t || t.hour !== hour) {
+        tries.set(who, { hour, n: 1 });
+        return false;
+      }
+      t.n++;
+      return t.n > most;
+    };
+  };
+  const tooMany = limiter(PICTURES_PER_HOUR);
+  const tooManyCounts = limiter(COUNTS_PER_HOUR);
+  const pictures = () => require('./picture');
+  const canKeepPictures = () => store.open && typeof store.savePicture === 'function';
+
+  // GET /p/<id> is the page a shared link opens, GET /p/<id>.png the picture on it.
+  async function pictureRoute(id, png, headers) {
+    let pic = null;
+    try {
+      if (canKeepPictures()) pic = await store.picture(id);
+    } catch (e) {
+      // Without the database the page still opens, with the game's own picture.
+      if (png) throw e;
+      console.error(`GET /p/${id}:`, e);
+    }
+    if (png) {
+      if (!pic) return { status: 404, json: { error: 'There is no such picture.' }, cache: NO_PICTURE_CACHE };
+      return { status: 200, body: await pictures().render(pic, id), type: 'image/png', cache: PICTURE_CACHE };
+    }
+    return { status: 200, html: pictures().page(pic, id, originOf(headers)), cache: pic ? PICTURE_PAGE_CACHE : NO_PICTURE_CACHE };
+  }
 
   const routes = {
     // The wording follows Sign-In with Ethereum, so a wallet can warn if another site shows this message.
@@ -97,20 +167,57 @@ function createApp({ store, secret, local = false, clock = Date.now }) {
       const place = await store.saveScore(session.a, score, now);
       return { json: Object.assign({ accepted: true }, place) };
     },
+    // How far people get. Numbers only: no address, no name, nothing kept about the request.
+    'POST /api/count': async ({ body, headers }) => {
+      hostOf(headers);
+      if (!store.open) return { json: { ok: false } };
+      if (tooManyCounts(headers)) throw new Refusal(429, 'That is a lot of counts for one hour.');
+      const steps = cleanSteps(body);
+      if (steps.error) throw new Refusal(400, steps.error);
+      if (steps.length) await store.addCounts(steps, clock());
+      return { json: { ok: true } };
+    },
+    'GET /api/counts': async () => {
+      if (!store.open) return { json: { open: false, rows: [] }, cache: CLOSED_CACHE };
+      return { json: { open: true, rows: await store.counts(clock(), COUNT_DAYS) }, cache: COUNTS_CACHE };
+    },
+    'GET /api/stats': async () => {
+      if (!store.open) return { html: countsPage([], clock()), cache: CLOSED_CACHE };
+      return { html: countsPage(await store.counts(clock(), COUNT_DAYS), clock()), cache: COUNTS_CACHE };
+    },
     'GET /api/board': async () => {
       if (!store.open) return { json: { open: false, rows: [], total: 0 }, cache: CLOSED_CACHE };
       const board = await store.board();
       return { json: Object.assign({ open: true }, board), cache: BOARD_CACHE };
     },
+    // A picture to share gets its own link. Only the plain data comes in, and the server paints it itself.
+    'POST /api/picture': async ({ body, headers }) => {
+      hostOf(headers);
+      if (!canKeepPictures()) return { json: { ok: false } };
+      if (tooMany(headers)) throw new Refusal(429, 'That is a lot of pictures for one hour. Please try again later.');
+      const pic = pictures().clean(body);
+      if (!pic) throw new Refusal(400, 'That is not a picture of a restaurant.');
+      const id = pictures().idOf(pic);
+      const now = clock();
+      if (!(await store.picture(id))) {
+        if ((await store.picturesToday(now)) >= PICTURES_PER_DAY) return { json: { ok: false } };
+        Object.assign(pic, pictures().boardLines(await store.board()));
+        // Painted once now: it proves the picture paints, and has it ready for the first look at the link.
+        await pictures().render(pic, id);
+        await store.savePicture(id, pic, now);
+      }
+      return { json: { ok: true, id, url: `${originOf(headers)}/p/${id}` } };
+    },
   };
 
-  // Takes a plain request and gives back a status, a JSON body and how long it may be cached.
+  // Takes a plain request and gives back a status, a body and how long it may be cached.
   return async function handle({ method, path, headers, body }) {
-    const route = routes[`${method} ${path}`];
+    const shared = (method === 'GET' || method === 'HEAD') && PICTURE_PATH.exec(path);
+    const route = shared ? () => pictureRoute(shared[1], !!shared[2], headers || {}) : routes[`${method} ${path}`];
     if (!route) return { status: 404, json: { error: 'Not found.' } };
     try {
       const out = await route({ headers: headers || {}, body });
-      return { status: 200, json: out.json, cache: out.cache || 'no-store' };
+      return { status: out.status || 200, json: out.json, html: out.html, body: out.body, type: out.type, cache: out.cache || 'no-store' };
     } catch (e) {
       if (e instanceof Refusal) return { status: e.status, json: { error: e.message }, cache: 'no-store' };
       console.error(`${method} ${path}:`, e);
@@ -119,4 +226,4 @@ function createApp({ store, secret, local = false, clock = Date.now }) {
   };
 }
 
-module.exports = { createApp, PUBLIC_HOSTS };
+module.exports = { createApp, PUBLIC_HOSTS, PICTURES_PER_HOUR, PICTURES_PER_DAY, COUNTS_PER_HOUR };

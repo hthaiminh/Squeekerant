@@ -128,6 +128,9 @@
     return { fromRound: round, toRound: round, active: 0, quiet: 0, unknown: 0, work: 0, served: 0, earned: 0, banked: 0, soldOut: 0, full: 0, tired: 0, newSpecies: [], rares: [], winkGain: 0, dreams: [], naps: 0, jobs: [], levels: 0, festival: null, verdict: null };
   }
 
+  // A sleep already under way counts in full, on feeds that have read it. The practice kitchen's pretend hamster starts from nothing.
+  const sleepSoFar = (feed, round) => (feed.quietUpTo ? feed.quietUpTo(round) : 0);
+
   function newGame(t, feed, opts = {}) {
     const round = feed.settled(t);
     const info = feed.round(round);
@@ -177,7 +180,7 @@
       book: {},
       trophies: {},
       // Counted from the wheel as it is now. Passes made before you opened are not your guests.
-      clock: { round, cum: info.cum, guestN: Math.floor(feed.live(t).cum / CFG.WORK_PER_GUEST), quietTotal: 0, streak: 0, hash: feed.hashBefore(round), capRound: 0, capUsed: 0 },
+      clock: { round, cum: info.cum, guestN: Math.floor(feed.live(t).cum / CFG.WORK_PER_GUEST), quietTotal: 0, streak: sleepSoFar(feed, round), hash: feed.hashBefore(round), capRound: 0, capUsed: 0 },
       dreamDish: null,
       journal: {},
       wakes: 0,
@@ -218,7 +221,7 @@
     const r = feed.settled(t);
     const info = feed.round(r);
     const cum = feed.live(t).cum;
-    Object.assign(s.clock, { round: r, cum: info.cum, guestN: Math.floor(cum / CFG.WORK_PER_GUEST), hash: feed.hashBefore(r), streak: 0, capRound: 0, capUsed: 0 });
+    Object.assign(s.clock, { round: r, cum: info.cum, guestN: Math.floor(cum / CFG.WORK_PER_GUEST), hash: feed.hashBefore(r), streak: sleepSoFar(feed, r), capRound: 0, capUsed: 0 });
     s.km = Math.floor((info.cum * (feed.mmPerPass || 878)) / 1000000);
     s.feedMode = feed.mode;
     s.wheelCore = feed.core || null;
@@ -737,6 +740,12 @@
     }
   }
 
+  // How far this sleep has come toward his dream, in hours. Whatever the screen says about the coming dream reads this.
+  function dreamProgress(s) {
+    const rounds = s.clock.streak;
+    return { hours: rounds / 6, dreamIn: Math.max(0, CFG.DREAM_ROUNDS - rounds) / 6, goldIn: Math.max(0, CFG.GOLD_ROUNDS - rounds) / 6 };
+  }
+
   function onWake(s, info, streak, out) {
     if (streak >= CFG.DREAM_ROUNDS) {
       const gold = streak >= CFG.GOLD_ROUNDS;
@@ -992,6 +1001,8 @@
         s.clock.guestN = Math.floor(last.cum / CFG.WORK_PER_GUEST);
       }
       s.clock.hash = feed.hashBefore(target + 1);
+      // Weeks away skip their middle, but a sleep going on now counts in full, so his dream comes the same as for everyone.
+      s.clock.streak = sleepSoFar(feed, target);
     }
     out.toRound = s.clock.round;
     return { steps };
@@ -1993,6 +2004,7 @@
 
   WW.Engine = {
     newGame,
+    dreamProgress,
     migrate,
     advance,
     pulse,

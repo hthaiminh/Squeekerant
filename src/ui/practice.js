@@ -438,6 +438,7 @@
       this.stepKey = null;
       this.lookedAt = null;
       const step = this.step;
+      this.game.count.once('lesson_' + step.id);
       if (step.enter) step.enter();
       this.game.ctaKey = null;
       this.game.updateCta();
@@ -483,7 +484,7 @@
       if (step.next) actions.push(btn(step.nextLabel || 'Next', () => this.next(), 'tomato small'));
       const percent = Math.round((this.i / this.steps.length) * 100);
       const parts = [
-        el('div', { class: 'coachhead' }, img(WW.hamsterPose({ fur: 'golden', hat: 'toque', job: 'chef' }, 0), '', ''), el('b', null, step.title), el('button', { class: 'coachskip', type: 'button', on: { click: () => this.finishNow() } }, 'Skip practice')),
+        el('div', { class: 'coachhead' }, img(WW.hamsterPose({ fur: 'golden', hat: 'toque', job: 'chef' }, 0), '', ''), el('b', null, step.title), el('button', { class: 'coachskip', type: 'button', on: { click: () => { this.game.count.once('lesson_left'); this.finishNow(); } } }, 'Skip practice')),
         el('div', { class: 'coachbar' }, el('i', { style: `width:${percent}%` })),
         el('p', null, step.body),
         said ? el('p', { class: 'coachtodo' }, said) : null,
@@ -548,6 +549,7 @@
       const g = this.game;
       this.box.hidden = true;
       this.ring.hidden = true;
+      g.count.once('lesson_finished');
       g.showTicket(
         el('h2', null, 'That is the whole kitchen'),
         el('p', null, this.real ? 'Your own restaurant has been running with the real Squeektoshi all along.' : 'From now on everything follows the real Squeektoshi. He may be asleep when you open, and that is fine. Cook ahead, because food never spoils, and guests come when he runs.'),

@@ -17,8 +17,9 @@
   --sky: #8ed0e8;
   --lilac: #a99ad6;
   --cloth: rgba(228, 87, 46, 0.2);
-  --logo: 'Pixelify Sans', 'Courier New', monospace;
-  --display: 'Jersey 20', 'Pixelify Sans', 'Courier New', monospace;
+  /* VT323 comes before the plain fallback for the letters the other two lack, such as Vietnamese ones in a name. */
+  --logo: 'Pixelify Sans', 'VT323', 'Courier New', monospace;
+  --display: 'Jersey 20', 'Pixelify Sans', 'VT323', 'Courier New', monospace;
   --body: 'VT323', 'Courier New', monospace;
   --px: 3px;
 }
@@ -301,6 +302,8 @@ input[type=text] { width: 100%; background: var(--paper); border: 0; padding: 6p
 .bigdish { width: 96px; height: 96px; margin: 8px auto; display: block; image-rendering: pixelated; }
 .critter { width: 80px; height: 96px; image-rendering: pixelated; display: block; margin: 0 auto; }
 .logo { font: 700 42px/1 var(--logo); color: var(--tomato); text-shadow: 3px 3px 0 var(--ink); }
+.ticket.sharecard { width: min(640px, 100%); }
+.sharepic { display: block; width: 100%; height: auto; margin-top: 6px; box-shadow: 0 0 0 3px var(--ink); }
 
 /* The details box that follows the pointer */
 #tip {
@@ -360,7 +363,7 @@ body.landing #toasts { z-index: 40; left: 50%; bottom: 20px; width: min(92vw, 44
 .coachactions .coachskip { margin-right: auto; }
 #coachring { position: fixed; z-index: 27; pointer-events: none; box-shadow: 0 0 0 3px var(--tomato), 0 0 0 6px var(--paper), 0 0 0 8px var(--ink); animation: coachring 0.9s steps(2, jump-none) infinite; }
 @keyframes coachring { 50% { box-shadow: 0 0 0 5px var(--tomato), 0 0 0 8px var(--paper), 0 0 0 10px var(--ink); } }
-body.practice #btnWallet { display: none; }
+body.practice #btnWallet, body.practice #btnShare { display: none; }
 body.practice #cta { justify-content: flex-end; }
 body.practice #toasts { bottom: 240px; }
 

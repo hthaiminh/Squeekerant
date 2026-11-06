@@ -384,6 +384,7 @@
     }
     cookDreamNow() {
       const s = this.s;
+      if (!s.dreamDish) return this.game.toast('That dream has faded.', 'bad');
       const def = E().dishDef(s.dreamDish.key);
       const idx = s.stations.findIndex((st) => !st.job && st.type === def.st);
       if (idx < 0) return this.game.toast(`Free up a ${STATION_INFO[def.st].n} first.`, 'bad');
@@ -1047,6 +1048,7 @@
       return [
         this.head('The Wheel'),
         el('div', { class: 'row' }, el('div', { class: 'grow' }, el('div', { class: 'title' }, `Squeektoshi: ${stateText}`), el('div', { class: 'sub' }, live.state === 'running' ? `${live.rpm} turns a minute` : g.quietText()))),
+        live.state === 'quiet' ? el('p', { class: 'note' }, g.dreamNote()) : null,
         el('p', { class: 'note' }, g.feed.describe()),
         el('div', { class: 'sec' }, el('h3', null, 'Last 24 hours'), el('img', { class: 'px', style: 'width:100%;height:60px', src: chart.toDataURL(), alt: 'Passes per round over 24 hours' }), line('Wheel passes', fmt(workDay)), line('Distance', ((workDay * (g.feed.mmPerPass || 878)) / 1e6).toFixed(1) + ' km'), line('Rounds with running', `${active} of 144`), line('Guests the wheel brought', fmt(workDay / WW.CFG.WORK_PER_GUEST))),
         el('div', { class: 'sec' }, el('h3', null, 'How he runs your kitchen'), words('When he runs', 'Guests walk in, woks fire, staff tire'), words('When he sleeps', 'Pots simmer, Winks fill, staff rest'), words('When he wakes', 'His dream becomes a dish'), words('No signal', 'Nothing counts, nothing is lost')),
@@ -1139,7 +1141,8 @@
           el('h3', null, 'Getting better'),
           item(icon('book'), 'Recipes', `Neighbours share one every second level. Find the rest in the Test Kitchen, ${CFG.EXPERIMENT_COST} Winks a try, or buy a hint for ${CFG.HINT_COST} Winks.`),
           item(icon('paw'), 'Guests', `There are ${WW.ANIMALS.length} kinds of tiny animal to meet. Some only come for a certain dish or piece of decor.`),
-          item(icon('trophy'), 'Leaderboard', 'Restaurants are ranked by level. Connect a wallet to be listed. You only sign a message, which costs nothing and sends no transaction.')
+          item(icon('trophy'), 'Leaderboard', 'Restaurants are ranked by level. Connect a wallet to be listed. You only sign a message, which costs nothing and sends no transaction.'),
+          item(icon('camera'), 'Show it off', 'The camera button paints a picture of your restaurant to post or send.')
         ),
       ];
     }

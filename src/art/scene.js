@@ -695,6 +695,16 @@
       p.rect(7, 10, 2, 5, C.bark);
       p.px(6, 5, C.tomato);
     },
+    camera(p) {
+      p.rect(4, 2, 5, 2, C.iron);
+      p.rect(1, 4, 14, 10, C.iron);
+      p.rect(2, 5, 12, 8, C.steel);
+      p.rect(2, 7, 12, 1, C.iron);
+      p.disc(8, 9, 3, C.ink);
+      p.disc(8, 9, 2, C.deep);
+      p.px(7, 8, C.sky);
+      p.rect(11, 5, 2, 1, C.butter);
+    },
     expand(p) {
       p.rect(2, 2, 12, 12, C.oat);
       p.rect(2, 2, 12, 1, C.bark);
