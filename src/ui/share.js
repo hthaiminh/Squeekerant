@@ -89,8 +89,19 @@
   const whole = (v, lo, hi) => Number.isSafeInteger(v) && v >= lo && v <= hi;
   const real = (v, lo, hi) => typeof v === 'number' && v >= lo && v <= hi;
   const word = (v) => (typeof v === 'string' && /^[a-z]{1,12}$/.test(v) ? v : null);
+  // Every letter the game's three fonts can draw, read from their own tables (src/fonts). The server has no other fonts,
+  // so it would draw empty boxes where a browser borrows from the computer, emoji or Chinese letters in a name for one.
+  // Anything else is left off the picture on both sides, so the two pictures stay the same.
+  const DRAWABLE = '20-7e,a0-17e,18f,192,1a0-1a1,1af-1b0,1c4-1cc,1e6-1e7,1ea-1eb,1fa-21b,22a-22d,230-233,237,259,2bc,2c6-2c7,2c9,2d8-2dd,300-304,306-30c,30f,311-312,31b,323-324,326-328,32e,331,386,388-38a,38c,38e-38f,391-3a1,3a3-3af,3b1-3c1,3c3-3ce,401-405,407-40c,40e-41d,420-44f,451-45c,45e-45f,490-491,1e80-1e85,1e9e,1ea0-1ef9,200a,2013-2014,2018-201a,201c-201e,2020-2022,2026,2030,2039-203a,203c,2044,2070,2074-2079,2080-2089,20a1,20a3-20a4,20a6-20a7,20a9,20ab-20ad,20b1-20b2,20b5,20b9-20ba,20bc-20bd,2116,2122,2126,2153-2154,215b-215e,2202,2206,220f,2211-2212,2215,2219-221a,221e,222b,2248,2260,2264-2265,25ca,2698,fb00-fb04,fb06'
+    .split(',')
+    .map((r) => r.split('-').map((h) => parseInt(h, 16)))
+    .map(([a, b]) => [a, b === undefined ? a : b]);
+  const drawable = (ch) => {
+    const c = ch.codePointAt(0);
+    return DRAWABLE.some(([a, b]) => c >= a && c <= b);
+  };
   const text = (v, max, fallback) => {
-    const plain = typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, '').replace(/\s+/g, ' ').trim() : '';
+    const plain = typeof v === 'string' ? Array.from(v.replace(/[\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, '')).filter((ch) => /\s/.test(ch) || drawable(ch)).join('').replace(/\s+/g, ' ').trim() : '';
     return Array.from(plain).slice(0, max).join('').trim() || fallback;
   };
   const rows = (v, max, each) => (Array.isArray(v) ? v.slice(0, max).map((r) => (Array.isArray(r) ? each(r) : null)).filter(Boolean) : []);
@@ -419,9 +430,9 @@
     return card;
   }
 
-  // The words that go with it. The player can change them before posting.
-  function words(p) {
-    const main = WW.tr(`My tiny restaurant ${p.shop} is level ${p.level}. A real hamster, @squeekchain's Squeektoshi, decides when guests walk in.`);
+  // The words that go with it, with the name as the player wrote it, since a post can show any letter. The player can change them before posting.
+  function words(p, name = p.shop) {
+    const main = WW.tr(`My tiny restaurant ${name} is level ${p.level}. A real hamster, @squeekchain's Squeektoshi, decides when guests walk in.`);
     const dream = p.dream ? E().dishDef(p.dream) : null;
     return dream ? `${main} ${WW.tr(`His latest dream: ${dream.n}.`)}` : main;
   }
@@ -474,7 +485,7 @@
     }
     show(card, blob, pic) {
       const g = this.game;
-      const text = words(pic);
+      const text = words(pic, String(g.s.shop).trim() || pic.shop);
       const url = card.toDataURL('image/png');
       const name = fileName(pic.shop);
       const file = blob && typeof File === 'function' ? new File([blob], name, { type: 'image/png' }) : null;
@@ -493,7 +504,13 @@
         link = link || this.linkFor(pic);
         const address = await link;
         if (!address) link = null;
-        tab.location.href = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(address || 'https://' + SITE)}`;
+        // Closed again while the link was on its way: nothing to send anywhere.
+        if (tab.closed) return;
+        try {
+          tab.location.href = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(address || 'https://' + SITE)}`;
+        } catch (e) {
+          return;
+        }
         if (!address) g.toast('The picture could not go with the post this time. Save it, then add it to your post.', 'bad', null, 7000);
       };
       const viaSheet = async () => {
@@ -539,6 +556,7 @@
   }
 
   WW.Share = Share;
+  WW.pictureLetter = drawable;
   WW.pictureOf = snapshot;
   WW.cleanPicture = cleanPicture;
   WW.paintPicture = paintPicture;

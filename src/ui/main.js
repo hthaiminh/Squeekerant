@@ -238,6 +238,7 @@
       const saved = (data && data.save) || this.loadLocal();
       if (saved) this.useSave(saved);
       if (!this.s) this.count.once('first_visit');
+      this.watchTabs();
       this.landing.draw();
       this.connectLive();
       this.connectCloud();
@@ -261,6 +262,34 @@
       window.addEventListener('pointerdown', unlock);
       window.addEventListener('keydown', unlock);
       this.wireTips();
+    }
+
+    // One tab plays at a time. A newly opened tab takes over and an older one stops, so it can never save an older restaurant over a newer one.
+    watchTabs() {
+      if (typeof BroadcastChannel !== 'function') return;
+      let channel;
+      try {
+        channel = new BroadcastChannel('squeekerant-tabs');
+      } catch (e) {
+        return;
+      }
+      const me = Math.random().toString(36).slice(2);
+      const announce = () => channel.postMessage({ kind: 'here', id: me });
+      channel.onmessage = (e) => {
+        const m = e.data;
+        if (!m || m.kind !== 'here' || m.id === me || this.elsewhere) return;
+        this.elsewhere = true;
+        if (this.music) this.music.play(null);
+        this.showTicket(el('h2', null, 'Open in another tab'), el('p', null, 'Squeekerant is playing in another tab now. This one has stopped, so the two can never save over each other.'), this.actions(btn('Play here', () => location.reload(), 'tomato')));
+      };
+      // Back from the browser's history, a page may have missed a newer tab. If that one saved since, this one starts again from its save.
+      window.addEventListener('pageshow', (e) => {
+        if (!e.persisted || this.elsewhere) return;
+        const stored = this.loadLocal();
+        if (stored && this.s && stored.savedAt > (this.s.savedAt || 0)) return location.reload();
+        announce();
+      });
+      announce();
     }
 
     useSave(save) {
@@ -791,7 +820,7 @@
     // Live data
 
     async connectLive() {
-      if (window.claude || this.connecting) return; // The Artifact viewer has no network, the recording stays in charge.
+      if (window.claude || this.connecting || this.elsewhere) return; // The Artifact viewer has no network, the recording stays in charge.
       this.connecting = true;
       try {
         const live = await WW.LiveFeed.connect();
@@ -828,6 +857,8 @@
       else this.switchFeed(live);
     }
     pollLive() {
+      // A tab that another one took over asks nothing more of the API.
+      if (this.elsewhere) return;
       const feed = this.practice ? this.liveFeed : this.feed;
       if (feed && feed.mode === 'live') {
         if (!feed.replaced) feed.poll();
@@ -862,7 +893,7 @@
       }
     }
     autosave(force) {
-      if (!this.s || this.practice || (!this.dirty && !force)) return;
+      if (!this.s || this.practice || this.elsewhere || (!this.dirty && !force)) return;
       this.dirty = false;
       this.s.savedAt = Date.now();
       this.s.clockOffset = this.feed.mode === 'recording' ? this.feed.offset : 0;
@@ -910,6 +941,8 @@
     frame(ts) {
       const dt = Math.min(0.1, (ts - this.last) / 1000);
       this.last = ts;
+      // Stopped because another tab took over: nothing moves here any more.
+      if (this.elsewhere) return requestAnimationFrame((t) => this.frame(t));
       if (this.landing.open) this.landing.frame(dt);
       else if (this.s) {
         if (this.speed > 1 && this.feed.mode === 'recording') this.feed.offset += dt * 1000 * (this.speed - 1);
@@ -921,6 +954,7 @@
     }
 
     tick() {
+      if (this.elsewhere) return;
       if (this.landing.open) {
         this.live = this.feed.live(this.now());
         this.tickN++;

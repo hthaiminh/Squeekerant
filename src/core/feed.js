@@ -6,6 +6,8 @@
   const SETTLE_LAG_MS = 40000;
   const QUIET_AFTER_MS = 600000;
   const RUN_GAP_MS = 5000;
+  // The page asks every few seconds. With no good answer for this long, what it last heard is too old to show as now.
+  const SIGNAL_LOST_MS = 60000;
 
   const B64 = {};
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'.split('').forEach((c, i) => (B64[c] = i));
@@ -242,7 +244,7 @@
       this.offset = 0;
       this.rpmHistory = [];
       this.liveCum = Number(boot.status.measurement.cumulativeWorkUnits);
-      this.lastSeenAt = Date.now();
+      this.heardAt = Date.now();
       this.lastPassAt = 0;
       this.anchorCum = boot.work;
       this.anchorRound = boot.settled;
@@ -289,6 +291,7 @@
           return;
         }
         this.status = st;
+        this.heardAt = Date.now();
         if (cum > this.liveCum) this.lastPassAt = Date.now();
         this.liveCum = cum;
         const settled = Number(st.builder && st.builder.anchor && st.builder.anchor.settledThroughRound);
@@ -399,8 +402,10 @@
     }
     live(t) {
       const m = this.status.measurement;
-      const rpm = Math.round((m.rpmMilli || 0) / 1000);
-      const stale = m.freshness !== 'online' || m.coreStatus === 'COUNTER_FAULT';
+      // Lost touch, the network or the API: no signal, rather than the last answer passing for now.
+      const lost = Date.now() - this.heardAt > SIGNAL_LOST_MS;
+      const rpm = lost ? 0 : Math.round((m.rpmMilli || 0) / 1000);
+      const stale = lost || m.freshness !== 'online' || m.coreStatus === 'COUNTER_FAULT';
       const seen = rpm > 0 || Date.now() - this.lastPassAt < RUN_GAP_MS;
       const ago = this.lastPassAt ? Date.now() - this.lastPassAt : Infinity;
       return {

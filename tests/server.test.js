@@ -335,6 +335,52 @@ test('only the game\'s own pieces get into a picture, and the names follow the b
   await assert.rejects(pictures.render(Object.assign({}, p, { room: [1, 1] }), 'BBBBBBBBBBBB'));
 });
 
+// The letters a font has, from its own cmap table (format 4, which all three use).
+function fontLetters(file) {
+  const buf = require('fs').readFileSync(file);
+  let at = 0;
+  for (let i = 0; i < buf.readUInt16BE(4); i++) if (buf.toString('ascii', 12 + i * 16, 16 + i * 16) === 'cmap') at = buf.readUInt32BE(20 + i * 16);
+  for (let i = 0; i < buf.readUInt16BE(at + 2); i++) {
+    const t = at + buf.readUInt32BE(at + 8 + i * 8);
+    if (buf.readUInt16BE(at + 4 + i * 8) !== 3 || buf.readUInt16BE(at + 6 + i * 8) !== 1 || buf.readUInt16BE(t) !== 4) continue;
+    const seg2 = buf.readUInt16BE(t + 6);
+    const ends = t + 14;
+    const starts = ends + seg2 + 2;
+    const deltas = starts + seg2;
+    const offsets = deltas + seg2;
+    const out = new Set();
+    for (let s = 0; s < seg2 / 2; s++) {
+      const end = buf.readUInt16BE(ends + s * 2);
+      const start = buf.readUInt16BE(starts + s * 2);
+      const delta = buf.readInt16BE(deltas + s * 2);
+      const ro = buf.readUInt16BE(offsets + s * 2);
+      for (let c = start; c <= end && c !== 0xffff; c++) {
+        let g = ro ? buf.readUInt16BE(offsets + s * 2 + ro + (c - start) * 2) : c;
+        if (g) g = (g + delta) & 0xffff;
+        if (g) out.add(c);
+      }
+    }
+    return out;
+  }
+  throw new Error('no format 4 table in ' + file);
+}
+
+test('a picture only has letters its fonts can draw, the same on both sides, and the post keeps the real name', () => {
+  const PW = pictures.world();
+  const letters = new Set();
+  for (const [file] of pictures.FONT_FILES) for (const c of fontLetters(path.join(src, 'fonts', file))) if (c >= 32) letters.add(c);
+  for (let c = 32; c <= 0xffff; c++) {
+    if (c >= 0xd800 && c <= 0xdfff) continue;
+    assert.equal(PW.pictureLetter(String.fromCodePoint(c)), letters.has(c), `U+${c.toString(16)}`);
+  }
+  assert.equal(PW.pictureLetter('🍜'), false);
+  const p = pictures.clean(snapshot({ shop: '🍜 Mì Ơi 麺屋 ', chef: ['Ừm 🐹', 'golden', 'toque'] }));
+  assert.equal(p.shop, 'Mì Ơi');
+  assert.equal(p.chef[0], 'Ừm');
+  assert.equal(pictures.clean(snapshot({ shop: '麺屋 🍜' })).shop, 'The Tiny Table', 'nothing drawable left, so the usual name');
+  assert.match(PW.pictureWords(p, '🍜 Mì Ơi 麺屋'), /^My tiny restaurant 🍜 Mì Ơi 麺屋 is level 9\./);
+});
+
 test('a picture shows the real board, and pictures have limits', async () => {
   const { call, signIn, score, store } = setup();
   const s = await signIn(ALICE);

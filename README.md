@@ -62,6 +62,8 @@ The camera button next to Arrange paints a picture of your restaurant (`src/ui/s
 
 X cannot take a picture through a link, so Post on X gives the picture a link of its own, `/p/<id>`, and X shows that link as a large picture in the post. Discord and Telegram show it the same way. What goes to the server is never an image: the game first writes the picture down as plain data (the save's pieces and where everyone stands), checks it with `cleanPicture`, and paints that. The server runs the same check on what it gets, puts both names through the leaderboard's rules, writes in the real board for the sign outside, and paints the picture itself with the same painters (`server/picture.js`, on `@napi-rs/canvas` with the three fonts in `src/fonts`). So nothing on a picture can be anything but the game's own pieces and a name the board would take. The same picture always gets the same link.
 
+The server has only those three fonts, so a letter none of them can draw, an emoji or a Chinese letter in a name for one, is left off the picture on both sides and the two pictures stay the same. The words of the post keep the name exactly as the player wrote it. A test reads the fonts' own tables and checks the list in `share.js` against them.
+
 The data is kept in the `pictures` table (id, when, data), with nothing about who made it. Only the newest 20,000 are kept, an address can make 20 an hour and the whole site 2,000 a day. An address with no picture behind it still opens and shows the game's own preview. The picture for a link never changes, so it is cached for good. If the server cannot make a link, the post links the site instead and the game says so.
 
 ## The link preview
@@ -108,6 +110,8 @@ npm test           # rules on a made up wheel
 node tests/sim.js  # a bot plays 30 days on his real rounds and prints prices and income by source. Days, visits a day and busy can be given
 npm run recording  # refreshes src/data/recording.js from the API and SqueekCore
 ```
+
+One tab plays at a time. A newly opened tab takes over and an older one stops with a Play here button, so two tabs can never save over each other. If the official API stops answering for a minute after the page has connected, the wheel shows no signal rather than its last answer.
 
 The game itself needs nothing installed. The leaderboard's server needs `npm install` once, and again after a new package such as the picture painter, and `npm start` runs a local one that keeps its board and pictures in memory until you stop it. With network access the game follows the real wheel, so while he sleeps nobody comes in. A restaurant that follows the real wheel waits while the wheel can't be reached, shows no signal and catches up afterwards, it is never mixed with the recording. A new restaurant with no network, as in an Artifact, replays the recording in `src/data/recording.js` on a loop that keeps the time of day, and moves to the real wheel if the network comes back.
 

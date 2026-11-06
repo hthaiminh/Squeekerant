@@ -340,6 +340,33 @@ test('the feed connects from what the API has today, and notices a redeploy', as
   }
 });
 
+test('losing touch with the API after connecting shows no signal, not the last answer as if it were now', async () => {
+  require(path.join(src, 'core/feed.js'));
+  const real = globalThis.fetch;
+  const running = { installationId: 'sepolia-core-sepolia-20261103', measurement: { freshness: 'online', coreStatus: 'IDLE', rpmMilli: 72000, cumulativeWorkUnits: '3817' }, builder: { status: 'available', anchor: { settledThroughRound: '252', cumulativeWork: '3817' } } };
+  let down = false;
+  globalThis.fetch = async () => {
+    if (down) throw new Error('offline');
+    return { json: async () => running };
+  };
+  try {
+    const feed = await WW.LiveFeed.connect();
+    await feed.poll();
+    assert.equal(feed.live(Date.now()).state, 'running');
+    down = true;
+    await feed.poll();
+    assert.equal(feed.live(Date.now()).state, 'running', 'a few failed tries are nothing yet');
+    feed.heardAt = Date.now() - 61000;
+    const lost = feed.live(Date.now());
+    assert.deepEqual([lost.state, lost.rpm], ['unknown', 0], 'a minute with no good answer is no signal');
+    down = false;
+    await feed.poll();
+    assert.equal(feed.live(Date.now()).state, 'running', 'and the signal comes back with the next good answer');
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 test('the wheel running today connects even while /core says its indexer is unavailable', async () => {
   require(path.join(src, 'core/feed.js'));
   const real = globalThis.fetch;
