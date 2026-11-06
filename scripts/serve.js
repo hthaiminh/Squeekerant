@@ -39,6 +39,12 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
     return fs.createReadStream(path.join(__dirname, '..', 'src', 'ui', 'og.png')).pipe(res);
   }
+  // The app's manifest, service worker and icons, as the build puts them next to the page.
+  const APP = { '/manifest.webmanifest': 'application/manifest+json', '/sw.js': 'text/javascript', '/app-192.png': 'image/png', '/app-512.png': 'image/png', '/apple-touch-icon.png': 'image/png' };
+  if (APP[pathname]) {
+    res.writeHead(200, { 'content-type': APP[pathname], 'cache-control': 'no-store' });
+    return fs.createReadStream(path.join(dist, pathname.slice(1))).on('error', () => res.end()).pipe(res);
+  }
   const page = PAGES[pathname];
   if (!page) {
     res.writeHead(404, { 'content-type': 'text/plain' });

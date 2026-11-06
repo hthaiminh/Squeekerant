@@ -8,7 +8,7 @@ const { memoryStore, closedStore, sqlStore } = require('../server/store');
 const rules = require('../server/rules');
 
 const src = path.join(__dirname, '..', 'src');
-for (const f of ['core/rng.js', 'art/px.js', 'art/scene.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', 'core/counter.js']) require(path.join(src, f));
+for (const f of ['core/rng.js', 'art/px.js', 'art/scene.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', 'core/counter.js', 'core/savecode.js']) require(path.join(src, f));
 const WW = globalThis.WW;
 const E = WW.Engine;
 
@@ -592,4 +592,55 @@ test('the updates page lists every release newest first, the big things before t
   assert.match(updatesPage([{ v: '1.0.0', date: '2026-12-01', items: [{ kind: 'new', text: '<b>bold</b>' }] }], { icon: '', logo: '' }), /&lt;b&gt;bold&lt;\/b&gt;/, 'text is only text');
   const one = (over) => [Object.assign({ v: '0.0.2', date: '2026-11-06', items: [{ kind: 'new', text: 'x' }] }, over)];
   for (const bad of [[], one({ v: '2' }), one({ date: 'today' }), one({ items: [] }), one({ items: [{ kind: 'shiny', text: 'x' }] }), one({ items: [{ kind: 'new', big: true, text: 'x' }] }), one({}).concat(one({ v: '0.0.3' }))]) assert.throws(() => check(bad));
+});
+
+// Save codes.
+test('a save code carries the whole restaurant, and a code cut short or changed is refused', async () => {
+  const feed = { mode: 'live', settled: () => 100, round: () => ({ cum: 0, hash: 'h', work: 0 }), live: () => ({ cum: 0 }), hashBefore: () => 'h' };
+  const s = E.newGame(Date.parse('2026-11-06T00:00:00Z'), feed, { shop: 'Mì Ơi 🍜', name: 'Ừm' });
+  s.level = 17;
+  s.cash = 123456;
+  for (const a of WW.ANIMALS.slice(0, 90)) s.book[a.id] = 3;
+  const code = await WW.SaveCode.make(s);
+  assert.match(code, /^SQKZ1\.[A-Za-z0-9_-]+\.[0-9a-z]+$/, 'squeezed, one line, safe to paste anywhere');
+  assert.ok(code.length < JSON.stringify(s).length, `shorter than the save itself: ${code.length} for ${JSON.stringify(s).length}`);
+  assert.deepEqual(await WW.SaveCode.read(code), JSON.parse(JSON.stringify(s)), 'everything comes back');
+  assert.deepEqual(await WW.SaveCode.read(`  ${code.slice(0, 40)}\n${code.slice(40)}\n`), JSON.parse(JSON.stringify(s)), 'spaces and line breaks from pasting do not matter');
+  const refused = async (text, why) => {
+    await assert.rejects(WW.SaveCode.read(text), (e) => e instanceof WW.SaveCode.CodeError && why.test(e.message), text.slice(0, 20));
+  };
+  await refused(code.slice(0, code.length - 30), /not complete/);
+  await refused(code.slice(0, 200) + 'x' + code.slice(201), /not complete/);
+  await refused('hello', /not a Squeekerant save code/);
+  await refused('', /not a Squeekerant save code/);
+  // Valid code, but not a restaurant inside.
+  const real = globalThis.CompressionStream;
+  try {
+    delete globalThis.CompressionStream;
+    const plain = await WW.SaveCode.make({ hello: 1 });
+    assert.match(plain, /^SQKP1\./, 'a browser that cannot squeeze writes it plain');
+    await refused(plain, /not a Squeekerant save code/);
+    const plainSave = await WW.SaveCode.make(s);
+    globalThis.CompressionStream = real;
+    assert.deepEqual(await WW.SaveCode.read(plainSave), JSON.parse(JSON.stringify(s)), 'and any browser opens a plain one');
+  } finally {
+    globalThis.CompressionStream = real;
+  }
+});
+
+test('the app files are there, and the manifest names icons of the sizes it says', () => {
+  const fs = require('fs');
+  const ui = path.join(src, 'ui');
+  const manifest = JSON.parse(fs.readFileSync(path.join(ui, 'manifest.webmanifest'), 'utf8'));
+  assert.equal(manifest.start_url, '/');
+  assert.equal(manifest.display, 'standalone');
+  for (const icon of manifest.icons) {
+    const png = fs.readFileSync(path.join(ui, icon.src.slice(1)));
+    assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, icon.sizes, icon.src);
+  }
+  const apple = fs.readFileSync(path.join(ui, 'apple-touch-icon.png'));
+  assert.deepEqual([apple.readUInt32BE(16), apple.readUInt32BE(20)], [180, 180]);
+  const sw = fs.readFileSync(path.join(ui, 'sw.js'), 'utf8');
+  assert.match(sw, /req\.method !== 'GET' \|\| req\.mode !== 'navigate'/, 'the service worker leaves everything but page loads alone');
+  for (const step of ['save_code_made', 'save_code_loaded', 'install_pressed', 'installed']) assert.deepEqual(rules.cleanSteps({ steps: [step] }), [step], step);
 });

@@ -262,6 +262,56 @@
       window.addEventListener('pointerdown', unlock);
       window.addEventListener('keydown', unlock);
       this.wireTips();
+      this.watchInstall();
+    }
+
+    // Installing the game as an app: the browser's own prompt where it has one, the steps on an iPhone or iPad.
+    // The service worker only lets the page open with no network. The real site only, never the Artifact preview.
+    watchInstall() {
+      if (window.claude || !document.querySelector('link[rel="manifest"]')) return;
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        this.installPrompt = e;
+        this.installChanged();
+      });
+      window.addEventListener('appinstalled', () => {
+        this.installPrompt = null;
+        this.count.once('installed');
+        this.installChanged();
+      });
+    }
+    installedApp() {
+      return (globalThis.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    }
+    appleDevice() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+    canInstall() {
+      return !window.claude && !!document.querySelector('link[rel="manifest"]') && !this.installedApp() && (!!this.installPrompt || this.appleDevice());
+    }
+    installChanged() {
+      if (this.landing && this.landing.open) this.landing.draw();
+      if (this.panels && this.panels.tab === 'howto' && this.panelVisible()) this.panels.render();
+    }
+    async install() {
+      this.sound('tap');
+      this.count.once('install_pressed');
+      if (this.installPrompt) {
+        const prompt = this.installPrompt;
+        this.installPrompt = null;
+        try {
+          await prompt.prompt();
+          await prompt.userChoice;
+        } catch (e) {}
+        return this.installChanged();
+      }
+      this.showTicket(
+        el('h2', null, 'Add it to your home screen'),
+        el('p', null, 'Tap the Share button of your browser, then Add to Home Screen.'),
+        el('p', { class: 'note', style: 'margin-top:6px' }, 'Squeekerant then opens from its own icon, like an app.'),
+        this.actions(btn('Got it', () => this.closeOverlay(), 'tomato'))
+      );
     }
 
     // One tab plays at a time. A newly opened tab takes over and an older one stops, so it can never save an older restaurant over a newer one.
@@ -298,11 +348,90 @@
       if (migrated.v !== 6) return;
       this.s = migrated;
       // A save on the real wheel waits for it. The recording must never be counted into it.
-      if (migrated.feedMode === 'live' && !window.claude) this.feed = this.liveFeed || new WW.HeldFeed(WW.RECORDING, migrated.clock);
+      if (migrated.feedMode === 'live' && !window.claude) this.feed = this.liveFeed && migrated.wheelCore === this.liveFeed.core ? this.liveFeed : new WW.HeldFeed(WW.RECORDING, migrated.clock);
+      else if (this.feed.mode !== 'recording') this.feed = new WW.RecordingFeed(WW.RECORDING);
       this.feed.offset = migrated.clockOffset || 0;
       this.sfx.on = migrated.soundOn !== false;
       this.refreshSoundIcon();
       this.afterLoad();
+      // Already connected, and this save is from a replay or another wheel, as one brought by a save code can be: it moves across now.
+      if (this.liveFeed && this.feed !== this.liveFeed && !this.practice) this.useLive(this.liveFeed);
+    }
+
+    // Save codes: the whole restaurant as one line of text, to take it to another device by hand.
+    async showSaveCode() {
+      if (!this.s || this.practice) return;
+      this.sound('tap');
+      this.autosave(true);
+      let code;
+      try {
+        code = await WW.SaveCode.make(this.s);
+      } catch (e) {
+        return this.toast('A save code could not be made here.', 'bad');
+      }
+      this.count.once('save_code_made');
+      const box = el('textarea', { class: 'savecode', readonly: true, rows: 5, 'aria-label': 'Your save code', spellcheck: 'false' });
+      box.value = code;
+      box.addEventListener('focus', () => box.select());
+      const copy = () => {
+        box.select();
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => this.toast('Save code copied.', 'good'), () => this.toast('Could not copy it here. Select the code and copy it yourself.', 'bad'));
+        else this.toast('Select the code and copy it yourself.', 'bad');
+      };
+      this.showTicket(
+        el('h2', null, 'Your save code'),
+        el('p', null, 'Your restaurant lives in this browser. This code is all of it as it is now. Keep it somewhere safe, or open it on another device with Load a save code.'),
+        box,
+        el('p', { class: 'note', style: 'margin-top:6px' }, 'Anyone with the code can open a copy of your restaurant. Your place on the leaderboard stays with your wallet.'),
+        this.actions(btn('Close', () => this.closeOverlay(), 'plain'), btn('Copy code', copy, 'tomato'))
+      );
+    }
+    showLoadCode() {
+      if (this.practice) return;
+      this.sound('tap');
+      const box = el('textarea', { class: 'savecode', rows: 5, 'aria-label': 'Save code', spellcheck: 'false', placeholder: 'SQK...' });
+      const said = el('p', { class: 'note', style: 'margin-top:6px;color:var(--brick)' });
+      const back = () => (this.s ? this.closeOverlay() : this.showWelcome());
+      const load = async () => {
+        let save;
+        try {
+          save = await WW.SaveCode.read(box.value);
+        } catch (e) {
+          said.textContent = WW.tr(e instanceof WW.SaveCode.CodeError ? e.message : 'That is not a Squeekerant save code.');
+          return;
+        }
+        if (E.migrate(JSON.parse(JSON.stringify(save))).v !== 6) {
+          said.textContent = WW.tr('That save is from a version too old to open.');
+          return;
+        }
+        if (!this.s) return this.useCode(save);
+        this.showTicket(
+          el('h2', null, 'Replace your restaurant?'),
+          el('p', null, `${this.s.shop}, level ${this.s.level}, is replaced on this device by ${save.shop}, level ${save.level}.`),
+          this.actions(btn('Keep mine', () => this.closeOverlay(), 'plain'), btn('Replace', () => this.useCode(save), 'tomato'))
+        );
+      };
+      this.showTicket(
+        el('h2', null, 'Load a save code'),
+        el('p', null, this.s ? 'Paste a code made with Make a save code. It replaces the restaurant on this device.' : 'Paste a code made with Make a save code, and your restaurant opens here.'),
+        box,
+        said,
+        this.actions(btn(this.s ? 'Cancel' : 'Back', back, 'plain'), btn('Open it', load, 'tomato'))
+      );
+      setTimeout(() => box.focus(), 50);
+    }
+    useCode(save) {
+      this.visit = null;
+      this.queue = [];
+      document.getElementById('overlay').classList.remove('show');
+      if (this.landing.open) this.landing.hide();
+      this.useSave(save);
+      this.dirty = true;
+      this.autosave(true);
+      this.count.once('save_code_loaded');
+      this.noteVisit();
+      this.toast(`${this.s.shop} is open on this device.`, 'good');
+      this.pumpQueue();
     }
 
     afterLoad() {
@@ -1453,8 +1582,9 @@
         el('div', { class: 'line' }, 'Orders served', el('b', { class: 'tabnum' }, r.served)),
         el('div', { class: 'line' }, 'Best combo', el('b', { class: 'tabnum' }, r.best)),
         el('div', { class: 'line' }, 'Missed', el('b', { class: 'tabnum' }, r.missed)),
-        el('div', { class: 'line' }, r.replay ? 'Tips (half for a replay)' : 'Tips (banked when the round settles)', el('b', { class: 'tabnum' }, money(r.tips))),
-        el('div', { class: 'line' }, 'Tips today', el('b', { class: 'tabnum' }, `${fmt(this.s.line.tips)} of ${fmt(E.lineCap(this.s))}`)),
+        // Short numbers stay on one line, however long the words beside them.
+        el('div', { class: 'line' }, r.replay ? 'Tips (half for a replay)' : 'Tips (banked when the round settles)', el('b', { class: 'tabnum', style: 'white-space:nowrap' }, money(r.tips))),
+        el('div', { class: 'line' }, 'Tips today', el('b', { class: 'tabnum', style: 'white-space:nowrap' }, `${fmt(this.s.line.tips)} of ${fmt(E.lineCap(this.s))}`)),
         this.actions(btn('Back to the kitchen', () => this.closeOverlay()))
       );
     }
@@ -1822,6 +1952,7 @@
         el('h2', null, 'First time here?'),
         el('p', null, 'Try the practice kitchen. A pretend hamster runs and sleeps when the lesson asks, so you can see how everything works in a few minutes.'),
         el('p', { class: 'note', style: 'margin-top:6px' }, 'Nothing there counts and nothing is saved.'),
+        el('p', { style: 'margin:8px 0 0;text-align:center' }, btn('I have a save code', () => this.showLoadCode(), 'plain small')),
         this.actions(
           btn('Skip, I have played before', () => {
             this.sound('tap');

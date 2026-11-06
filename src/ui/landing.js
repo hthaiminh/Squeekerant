@@ -151,7 +151,7 @@
     draw() {
       const g = this.game;
       const w = g.wallet;
-      const key = JSON.stringify([w.connected() ? w.address : null, !!g.s]);
+      const key = JSON.stringify([w.connected() ? w.address : null, !!g.s, g.canInstall() && !g.hasMouse]);
       if (key === this.key) return;
       this.key = key;
       const parts = [];
@@ -172,6 +172,8 @@
           el('p', { class: 'note' }, 'Only restaurants with a connected wallet are on the leaderboard. You only sign a message. It costs nothing and sends no transaction.')
         );
       }
+      // On a phone the game can go on the home screen.
+      if (g.canInstall() && !g.hasMouse) parts.push(btn('Install the game', () => g.install(), 'plain small'));
       parts.push(el('p', { class: 'note' }, WW.updatesLink()));
       this.card.replaceChildren(...parts);
     }

@@ -52,6 +52,10 @@ const COUNT_LABELS = [
   ['share_post', 'Pressed post or share'],
   ['share_copy', 'Copied the picture'],
   ['share_save', 'Saved the picture'],
+  ['save_code_made', 'Made a save code'],
+  ['save_code_loaded', 'Opened a restaurant from a save code'],
+  ['install_pressed', 'Pressed install'],
+  ['installed', 'Installed the game as an app'],
 ];
 const COUNT_STEPS = new Set(COUNT_LABELS.map(([step]) => step));
 const MOST_STEPS = 60;

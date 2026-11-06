@@ -1086,6 +1086,7 @@
         el('div', { class: 'sec' }, el('h3', null, 'Guest book trophies'), el('div', { class: 'grid' }, WW.CFG.BOOK_TROPHIES.map((n) => el('div', { class: 'cell food', tip: () => tips.decor(WW.DECOR_BY_ID['trophy_' + n]) }, img(s.trophies[n] ? WW.decorCanvas('trophy_' + n) : silhouette(WW.decorCanvas('trophy_' + n)), '', `${n} guests`), el('span', { class: 'cap' }, String(n)))))),
         el('div', { class: 'sec' }, el('h3', null, `Dream journal, ${journal.length} of ${WW.DREAMS.length * 2}`), journal.length ? el('div', { class: 'grid' }, journal.map((k) => el('div', { class: 'cell food', tip: () => tips.dish(E().dishDef(k), s) }, dishImg(E().dishDef(k)), el('span', { class: 'cap' }, E().dishDef(k).n)))) : el('p', { class: 'note' }, 'His first long sleep will write the first page.')),
         el('div', { class: 'sec' }, el('h3', null, 'Lately'), s.log.slice(0, 8).map((l) => el('div', { class: 'sub', style: 'padding:2px 0' }, l)), !s.log.length ? el('p', { class: 'note' }, 'Nothing yet.') : null),
+        this.game.practice ? null : el('div', { class: 'sec' }, el('h3', null, 'Your save'), el('p', { class: 'note' }, 'Your restaurant lives in this browser. A save code carries it to another device or browser.'), el('div', { style: 'margin-top:6px' }, btn('Make a save code', () => this.game.showSaveCode(), 'small', false, { title: 'Make a save code', lines: ['One line of text with your whole restaurant, to copy and keep.'] }), btn('Load a save code', () => this.game.showLoadCode(), 'small plain', false, { title: 'Load a save code', lines: ['Opens a restaurant from a save code. It replaces the one on this device.'] }))),
         this.game.practice ? null : el('div', { class: 'sec' }, btn('Start a new restaurant', () => this.game.confirmReset(), 'small plain', false, { title: 'Start a new restaurant', lines: ['This deletes your restaurant, guest book and recipes on this device.'] })),
       ];
     }
@@ -1100,6 +1101,7 @@
         this.head('How To Play'),
         el('p', { class: 'note' }, 'Your restaurant moves with a real hamster on a real wheel. Nothing here can wake him or ask him to run.'),
         g.practice ? null : el('div', { style: 'margin:8px 0' }, btn('Open the practice kitchen', () => g.startPractice(), 'lilac', false, { title: 'Practice kitchen', lines: ['A step by step lesson with a pretend hamster. Your restaurant is safe and keeps going without you.'] })),
+        g.canInstall() ? el('div', { class: 'row' }, el('div', { class: 'grow' }, el('div', { class: 'title' }, 'On your phone'), el('div', { class: 'sub' }, 'Put the game on your home screen. It opens from its own icon, like an app, and even with no network.')), btn('Install', () => g.install(), 'small teal', false, { title: 'Install the game', lines: ['Adds Squeekerant to your home screen.'] })) : null,
         el(
           'div',
           { class: 'sec' },

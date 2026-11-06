@@ -301,7 +301,8 @@ input[type=text] { width: 100%; background: var(--paper); border: 0; padding: 6p
 .dreamcard .actions { background: #2c2c60; box-shadow: none; }
 .bigdish { width: 96px; height: 96px; margin: 8px auto; display: block; image-rendering: pixelated; }
 .critter { width: 80px; height: 96px; image-rendering: pixelated; display: block; margin: 0 auto; }
-.logo { font: 700 42px/1 var(--logo); color: var(--tomato); text-shadow: 3px 3px 0 var(--ink); }
+/* Smaller on a narrow phone, so the name always fits its card. */
+.logo { font: 700 clamp(30px, 11.5vw, 42px)/1 var(--logo); color: var(--tomato); text-shadow: 3px 3px 0 var(--ink); }
 .ticket.sharecard { width: min(640px, 100%); }
 .sharepic { display: block; width: 100%; height: auto; margin-top: 6px; box-shadow: 0 0 0 3px var(--ink); }
 
@@ -418,4 +419,12 @@ body.practice #toasts { bottom: 240px; }
   #coachring { animation: none; }
   .toast { animation: none; }
   .btn, .cell, .chip, .iconbtn, .tab img, .shopfront img, .swatch, .stylecell { transition: none; }
+}
+/* A phone on its side: the welcome page fits one screen. */
+@media (max-height: 480px) {
+  #landing { gap: 8px; }
+  .landingcard { gap: 4px; padding: 10px 12px; }
+  .landingcard .btn { min-height: 36px; font-size: 21px; margin: 2px; }
+  .landingcard .btn.small { min-height: 28px; font-size: 18px; }
+  .landingcard .note { font-size: 15px; line-height: 1.1; }
 }

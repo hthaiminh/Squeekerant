@@ -22,11 +22,18 @@ const PREVIEW = [
   '<meta property="og:image:height" content="630">',
   '<meta property="og:image:alt" content="Squeekerant: a pixel restaurant in the woods with tiny animal guests">',
   '<meta name="twitter:card" content="summary_large_image">',
+  // Added to a phone's home screen it opens like an app, with its own icon.
+  '<link rel="manifest" href="/manifest.webmanifest">',
+  '<meta name="theme-color" content="#3a2340">',
+  '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
+  '<meta name="apple-mobile-web-app-title" content="Squeekerant">',
 ].join('');
+// What the app needs next to the page: the manifest, the service worker and the icons, all in src/ui.
+const APP_FILES = ['manifest.webmanifest', 'sw.js', 'app-192.png', 'app-512.png', 'apple-touch-icon.png'];
 const vi = process.argv[2] === 'vi';
 const pub = process.argv[2] === 'public';
 
-const ORDER = ['core/rng.js', 'art/px.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'art/animals.js', 'art/food.js', 'art/hamster.js', 'art/scene.js', 'art/outside.js', 'art/houses.js', 'art/logo.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', 'core/counter.js', ...(vi ? ['lang/vi.js'] : []), 'ui/sound.js', 'ui/music.js', 'ui/panels.js', 'ui/scene.js', 'ui/line.js', 'ui/landing.js', 'ui/share.js', 'ui/practice.js', 'ui/main.js'];
+const ORDER = ['core/rng.js', 'art/px.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'art/animals.js', 'art/food.js', 'art/hamster.js', 'art/scene.js', 'art/outside.js', 'art/houses.js', 'art/logo.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', 'core/counter.js', 'core/savecode.js', ...(vi ? ['lang/vi.js'] : []), 'ui/sound.js', 'ui/music.js', 'ui/panels.js', 'ui/scene.js', 'ui/line.js', 'ui/landing.js', 'ui/share.js', 'ui/practice.js', 'ui/main.js'];
 
 // The releases on /updates. The game links there and shows the latest number.
 const { updatesPage } = require('./updates-page');
@@ -51,6 +58,7 @@ fs.writeFileSync(path.join(out, 'index.html'), page);
 // The preview picture sits next to the page. It is made from the game itself, see the README. The public build must have it.
 const og = path.join(root, 'src', 'ui', 'og.png');
 if (!vi && (pub || fs.existsSync(og))) fs.copyFileSync(og, path.join(out, 'og.png'));
+if (!vi) for (const f of APP_FILES) fs.copyFileSync(path.join(root, 'src', 'ui', f), path.join(out, f));
 // The updates page, served at /updates, English like the rest of the public site.
 if (!vi) {
   const logo = fs.readFileSync(path.join(root, 'src', 'ui', 'logo.png')).toString('base64');

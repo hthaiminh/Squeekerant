@@ -1,5 +1,15 @@
 [
   {
+    "v": "0.0.9",
+    "date": "2026-11-06",
+    "title": "Take it with you",
+    "items": [
+      { "big": true, "kind": "new", "title": "Save codes", "text": "Carry your restaurant to another phone or browser. Make a save code in the Diary, then Load a save code on the other one. A new player can open one straight from the first card." },
+      { "big": true, "kind": "new", "title": "On your home screen", "text": "Install the game from the welcome page or How To Play. It opens from its own icon, like an app, and even with no network." },
+      { "kind": "fixed", "text": "Numbers on the On the Line results no longer break across two lines on small phones." }
+    ]
+  },
+  {
     "v": "0.0.8",
     "date": "2026-11-06",
     "title": "What's new",
