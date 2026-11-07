@@ -91,10 +91,12 @@ function createWake({ store, wheel, send, clock = Date.now, origin = 'https://ww
       try {
         seen = await wheel.read(null);
       } catch (e) {
+        console.error('Reading the wheel:', e.message);
         return { ok: false };
       }
       const latest = seen.dreams.length ? seen.dreams[seen.dreams.length - 1] : null;
-      const out = { ok: true, latest: latest ? { id: idOf(latest), slept: latest.slept, gold: latest.gold } : null, sent: 0 };
+      // Where the wheel was read from: the official API, or the chain alone when the API did not answer.
+      const out = { ok: true, source: seen.source || 'api', latest: latest ? { id: idOf(latest), slept: latest.slept, gold: latest.gold } : null, sent: 0 };
       if (!latest || now - latest.woke > WINDOW_MS || !store.open || finished.has(latest.wheel + ' ' + latest.round)) return out;
       await record(seen, now);
       Object.assign(out, await sendFor(latest, now));

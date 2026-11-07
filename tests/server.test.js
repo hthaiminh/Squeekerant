@@ -971,3 +971,15 @@ test('his dreams are checked every 15 minutes, as often as the free plan allows,
   for (const event of ['push', 'notificationclick', 'pushsubscriptionchange']) assert.ok(sw.includes(`addEventListener('${event}'`), event);
   for (const step of ['alerts_on', 'alert_opened']) assert.deepEqual(rules.cleanSteps({ steps: [step] }), [step], step);
 });
+
+test('with no answer from the official API, the server finds the last settled round on the chain alone', async () => {
+  for (const [upTo, last] of [[500, 500], [500, 498], [500, 497], [500, 490], [500, 400], [500, 3], [12, 1]]) {
+    let asked = 0;
+    const found = await wheelReader.lastSettled(async (r) => (asked++, r <= last), upTo);
+    assert.equal(found, last, `${last} of up to ${upTo}`);
+    assert.ok(asked <= 30, `in a few looks (${asked})`);
+  }
+  await assert.rejects(wheelReader.lastSettled(async () => false, 500), /No settled round/);
+  const config = require('fs').readFileSync(path.join(src, 'core/feed.js'), 'utf8');
+  assert.ok(config.includes('WW.KNOWN_WHEELS = KNOWN_WHEELS') && config.includes('WW.NODES = NODES'), 'the server reads the same wheels through the same nodes');
+});

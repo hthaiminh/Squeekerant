@@ -605,6 +605,9 @@
 
   WW.RecordingFeed = RecordingFeed;
   WW.LiveFeed = LiveFeed;
+  // The server reads the same wheels through the same nodes when the official API does not answer it.
+  WW.KNOWN_WHEELS = KNOWN_WHEELS;
+  WW.NODES = NODES;
   WW.HeldFeed = HeldFeed;
   WW.PracticeFeed = PracticeFeed;
   WW.ROUND_MS = ROUND_MS;
