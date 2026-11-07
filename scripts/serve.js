@@ -33,8 +33,8 @@ const server = http.createServer((req, res) => {
     res.writeHead(204);
     return res.end();
   }
-  // The server's own pages: the API, and the links shared pictures get.
-  if (pathname.startsWith('/api/') || pathname.startsWith('/p/')) return serveApi(req, res, pathname);
+  // The server's own pages: the API, the links shared pictures get, and his dreams.
+  if (pathname.startsWith('/api/') || pathname.startsWith('/p/') || pathname === '/dreams' || pathname.startsWith('/dreams/')) return serveApi(req, res, pathname);
   if (pathname === '/og.png') {
     res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
     return fs.createReadStream(path.join(__dirname, '..', 'src', 'ui', 'og.png')).pipe(res);

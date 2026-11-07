@@ -370,6 +370,33 @@
     "Open in another tab": "Đang mở ở tab khác",
     "Squeekerant is playing in another tab now. This one has stopped, so the two can never save over each other.": "Squeekerant đang chơi ở một tab khác. Tab này đã dừng để hai tab không bao giờ lưu đè lên nhau.",
     "Play here": "Chơi ở đây",
+    // The welcome page, the wake up alerts and the dreams page.
+    "A free pixel restaurant game, run live by a real hamster on a real wheel.": "Game nhà hàng pixel miễn phí, chạy trực tiếp theo một chú hamster thật trên bánh xe thật.",
+    "Guests come when he runs, even with the game closed.": "Khách tới khi cậu ấy chạy, kể cả lúc bạn tắt game.",
+    "A wallet only puts your restaurant on the leaderboard. You sign a message, with no fee and no transaction.": "Ví chỉ để đưa quán của bạn lên bảng xếp hạng. Bạn ký một tin nhắn, không mất phí và không có giao dịch nào.",
+    "Tell me when he wakes up": "Báo tôi khi cậu ấy dậy",
+    "Alerts are blocked for this site. They can be allowed again in the browser settings.": "Trang này đang bị chặn thông báo. Bạn có thể cho phép lại trong cài đặt trình duyệt.",
+    "No alerts, then.": "Vậy thì không bật thông báo.",
+    "Done. You'll get an alert when he wakes up from a long sleep.": "Xong. Bạn sẽ nhận thông báo khi cậu ấy dậy sau một giấc ngủ dài.",
+    "Alerts could not be turned on in this browser.": "Không bật được thông báo trên trình duyệt này.",
+    "Turning the alerts on. This can take a moment.": "Đang bật thông báo, có thể mất một lúc.",
+    "Wake up alerts are off.": "Đã tắt thông báo lúc cậu ấy dậy.",
+    "On an iPhone or iPad, alerts only work for the game on your home screen.": "Trên iPhone hoặc iPad, thông báo chỉ hoạt động khi game nằm trên màn hình chính.",
+    "Then open Squeekerant from its icon and turn the alerts on there.": "Sau đó mở Squeekerant từ biểu tượng và bật thông báo ở đó.",
+    "He's asleep right now": "Cậu ấy đang ngủ",
+    "Nobody comes in until he runs again. Cook now, and your restaurant serves on its own when he does, even with the game closed.": "Chưa có khách nào vào cho tới khi cậu ấy chạy lại. Hãy nấu ngay bây giờ, quán sẽ tự bán khi cậu ấy chạy, kể cả lúc bạn tắt game.",
+    "An alert can tell you when he wakes up, with the dream he had.": "Một thông báo có thể báo bạn lúc cậu ấy dậy, kèm giấc mơ của cậu ấy.",
+    "Not now": "Để sau",
+    "Wake up alerts": "Thông báo lúc cậu ấy dậy",
+    "On. One comes when he wakes up from a long sleep, with the dream he had.": "Đang bật. Bạn nhận một thông báo khi cậu ấy dậy sau giấc ngủ dài, kèm giấc mơ của cậu ấy.",
+    "One when he wakes up from a long sleep, with the dream he had.": "Một thông báo khi cậu ấy dậy sau giấc ngủ dài, kèm giấc mơ của cậu ấy.",
+    "One when he wakes up from a long sleep. On an iPhone or iPad, put the game on your home screen first.": "Một thông báo khi cậu ấy dậy sau giấc ngủ dài. Trên iPhone hoặc iPad, hãy đưa game ra màn hình chính trước.",
+    "Blocked for this site. They can be allowed again in the browser settings.": "Trang này đang bị chặn. Bạn có thể cho phép lại trong cài đặt trình duyệt.",
+    "Turn off": "Tắt",
+    "Turn on": "Bật",
+    "Stops the alerts on this device.": "Tắt thông báo trên máy này.",
+    "Your browser asks you first. Only the alert is ever sent.": "Trình duyệt sẽ hỏi bạn trước. Chỉ có thông báo được gửi tới.",
+    "Every dream so far": "Mọi giấc mơ từ trước tới nay",
     "Post on X shows this picture in your post.": "Đăng lên X sẽ hiện ảnh này trong bài đăng.",
     "The picture could not go with the post this time. Save it, then add it to your post.": "Lần này ảnh chưa đi kèm bài đăng được. Hãy lưu ảnh rồi thêm vào bài đăng.",
     "Save picture": "Lưu ảnh",
@@ -725,7 +752,10 @@
   }));
 
   const STATE_WORD = (w) => tr(w);
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const PATTERNS = [
+    // The welcome page while he sleeps, with when he last ran.
+    [/^He last ran (today|yesterday|on (\d+) ([A-Z][a-z]+)), from about (\d\d:\d\d) to (\d\d:\d\d)\.$/, (m) => `Lần chạy gần nhất ${m[1] === 'today' ? 'hôm nay' : m[1] === 'yesterday' ? 'hôm qua' : `ngày ${m[2]} tháng ${MONTH_NAMES.indexOf(m[3]) + 1}`}, khoảng ${m[4]} đến ${m[5]}.`],
     // His sleep, the dream it is heading for, and the share picture.
     [/^Dream Dish waiting, golden in ([\d.]+) h$/, 'Đã có Món Trong Mơ, thành vàng sau $1 giờ'],
     [/^Golden dream in ([\d.]+) h$/, 'Mơ vàng sau $1 giờ'],

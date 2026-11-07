@@ -6,10 +6,15 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/p/(.*)", "destination": "/api/index" },
+    { "source": "/dreams", "destination": "/api/index" },
+    { "source": "/dreams/(.*)", "destination": "/api/index" },
     { "source": "/updates", "destination": "/updates.html" }
   ],
   "functions": {
     "api/index.js": { "includeFiles": "src/**" }
+  },
+  "schedules": {
+    "wake-check": { "schedule": "*/15 * * * *", "path": "/api/wake/check" }
   },
   "headers": [
     {

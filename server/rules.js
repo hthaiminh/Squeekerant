@@ -56,6 +56,8 @@ const COUNT_LABELS = [
   ['save_code_loaded', 'Opened a restaurant from a save code'],
   ['install_pressed', 'Pressed install'],
   ['installed', 'Installed the game as an app'],
+  ['alerts_on', 'Turned on wake up alerts'],
+  ['alert_opened', 'Opened the game from a wake up alert'],
 ];
 const COUNT_STEPS = new Set(COUNT_LABELS.map(([step]) => step));
 const MOST_STEPS = 60;

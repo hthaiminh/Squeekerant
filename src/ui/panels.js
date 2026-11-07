@@ -1097,18 +1097,33 @@
       const CFG = WW.CFG;
       const item = (pic, title, ...lines) => el('div', { class: 'row' }, el('div', { class: 'spr' }, pic), el('div', { class: 'grow' }, el('div', { class: 'title' }, title), lines.map((l) => el('div', { class: 'sub' }, l))));
       const station = (type) => img(WW.stationCanvas(type, false, 0), '', STATION_INFO[type].n);
+      const alerts = g.alerts ? g.alerts.kind() : 'none';
+      const alertText = {
+        on: 'On. One comes when he wakes up from a long sleep, with the dream he had.',
+        off: 'One when he wakes up from a long sleep, with the dream he had.',
+        install: 'One when he wakes up from a long sleep. On an iPhone or iPad, put the game on your home screen first.',
+        blocked: 'Blocked for this site. They can be allowed again in the browser settings.',
+      }[alerts];
       return [
         this.head('How To Play'),
         el('p', { class: 'note' }, 'Your restaurant moves with a real hamster on a real wheel. Nothing here can wake him or ask him to run.'),
         g.practice ? null : el('div', { style: 'margin:8px 0' }, btn('Open the practice kitchen', () => g.startPractice(), 'lilac', false, { title: 'Practice kitchen', lines: ['A step by step lesson with a pretend hamster. Your restaurant is safe and keeps going without you.'] })),
         g.canInstall() ? el('div', { class: 'row' }, el('div', { class: 'grow' }, el('div', { class: 'title' }, 'On your phone'), el('div', { class: 'sub' }, 'Put the game on your home screen. It opens from its own icon, like an app, and even with no network.')), btn('Install', () => g.install(), 'small teal', false, { title: 'Install the game', lines: ['Adds Squeekerant to your home screen.'] })) : null,
+        alertText
+          ? el(
+              'div',
+              { class: 'row' },
+              el('div', { class: 'grow' }, el('div', { class: 'title' }, 'Wake up alerts'), el('div', { class: 'sub' }, alertText)),
+              alerts === 'blocked' ? null : btn(alerts === 'on' ? 'Turn off' : 'Turn on', () => (alerts === 'on' ? g.alerts.turnOff() : g.alerts.turnOn()), 'small teal', false, { title: 'Wake up alerts', lines: [alerts === 'on' ? 'Stops the alerts on this device.' : 'Your browser asks you first. Only the alert is ever sent.'] })
+            )
+          : null,
         el(
           'div',
           { class: 'sec' },
           el('h3', null, 'The hamster'),
           item(icon('wheel'), 'When he runs', `Every ${CFG.WORK_PER_GUEST} wheel passes bring a guest. Woks fire and staff get tired.`),
           item(icon('moon'), 'When he sleeps', 'No guests come in. Pots simmer, you earn 1 Wink each round and staff get their energy back.'),
-          item(icon('star'), 'When he wakes', `After ${CFG.DREAM_ROUNDS / 6} hours of sleep you get a Dream Dish, golden after ${CFG.GOLD_ROUNDS / 6} hours. It costs ${CFG.DREAM_DISH_COST} Winks to cook.`)
+          item(icon('star'), 'When he wakes', `After ${CFG.DREAM_ROUNDS / 6} hours of sleep you get a Dream Dish, golden after ${CFG.GOLD_ROUNDS / 6} hours. It costs ${CFG.DREAM_DISH_COST} Winks to cook.`, WW.dreamsLink())
         ),
         el(
           'div',
@@ -1159,6 +1174,8 @@
   WW.fmt = fmt;
   // The updates page. The Artifact preview has no site of its own, so it points at the real one.
   WW.updatesLink = () => el('a', { class: 'updateslink', href: globalThis.claude ? 'https://www.squeekerant.online/updates' : '/updates', target: '_blank', rel: 'noopener noreferrer' }, "What's new", WW.LATEST_UPDATE ? ` ${WW.LATEST_UPDATE}` : '');
+  // Every dream so far, each with the round and hash that picked it, on the server's own page.
+  WW.dreamsLink = () => el('a', { class: 'updateslink', href: globalThis.claude ? 'https://www.squeekerant.online/dreams' : '/dreams', target: '_blank', rel: 'noopener noreferrer' }, 'Every dream so far');
   WW.money = money;
   WW.flChip = flChip;
   WW.dishImg = dishImg;

@@ -644,3 +644,330 @@ test('the app files are there, and the manifest names icons of the sizes it says
   assert.match(sw, /req\.method !== 'GET' \|\| req\.mode !== 'navigate'/, 'the service worker leaves everything but page loads alone');
   for (const step of ['save_code_made', 'save_code_loaded', 'install_pressed', 'installed']) assert.deepEqual(rules.cleanSteps({ steps: [step] }), [step], step);
 });
+
+// Wake up alerts and his dreams
+
+const crypto = require('crypto');
+const push = require('../server/push');
+const wheelReader = require('../server/wheel');
+const { createWake, WINDOW_MS, CHECK_GAP_MS, BATCH } = require('../server/wake');
+
+// The browser's side of RFC 8291, to read what the server sent.
+function openPush(body, receiver, auth) {
+  const salt = body.subarray(0, 16);
+  const idlen = body[20];
+  const sender = body.subarray(21, 21 + idlen);
+  const sealed = body.subarray(21 + idlen);
+  const shared = receiver.computeSecret(sender);
+  const ikm = Buffer.from(crypto.hkdfSync('sha256', shared, auth, Buffer.concat([Buffer.from('WebPush: info\0'), receiver.getPublicKey(), sender]), 32));
+  const key = Buffer.from(crypto.hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: aes128gcm\0'), 16));
+  const nonce = Buffer.from(crypto.hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: nonce\0'), 12));
+  const d = crypto.createDecipheriv('aes-128-gcm', key, nonce);
+  d.setAuthTag(sealed.subarray(sealed.length - 16));
+  const plain = Buffer.concat([d.update(sealed.subarray(0, sealed.length - 16)), d.final()]);
+  let end = plain.length - 1;
+  while (end > 0 && plain[end] === 0) end--;
+  assert.equal(plain[end], 2, 'one record, marked as the last');
+  return plain.subarray(0, end).toString();
+}
+const FCM = 'https://fcm.googleapis.com/fcm/send/';
+
+test('an alert is encrypted the way RFC 8291 says, for that one browser, and signed with the site key', () => {
+  // The worked example in RFC 8291, section 5, byte for byte.
+  const want = 'DGv6ra1nlYgDCS1FRnbzlwAAEABBBP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A_yl95bQpu6cVPTpK4Mqgkf1CXztLVBSt2Ks3oZwbuwXPXLWyouBWLVWGNWQexSgSxsj_Qulcy4a-fN';
+  const example = { p256dh: 'BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4', auth: 'BTBZMqHH6r4Tts7J_aSIgg' };
+  const salt = Buffer.from(want, 'base64url').subarray(0, 16);
+  const own = Buffer.from('yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw', 'base64url');
+  assert.equal(push.encrypt('When I grow up, I want to be a watermelon', example, own, salt).toString('base64url'), want);
+
+  // A browser of our own reads a real message, and another browser cannot.
+  const browser = crypto.createECDH('prime256v1');
+  browser.generateKeys();
+  const auth = crypto.randomBytes(16);
+  const sub = { endpoint: FCM + 'abc', p256dh: browser.getPublicKey().toString('base64url'), auth: auth.toString('base64url') };
+  const message = JSON.stringify({ title: 'Squeektoshi is awake', body: 'He slept 20.0 hours.' });
+  const body = push.encrypt(message, sub);
+  assert.equal(openPush(body, browser, auth), message);
+  assert.notEqual(push.encrypt(message, sub).toString('hex'), body.toString('hex'), 'every message has its own salt and key');
+  const other = crypto.createECDH('prime256v1');
+  other.generateKeys();
+  assert.throws(() => openPush(body, other, auth));
+
+  // The token: for that push service only, short lived, from this site, and signed by the key the browsers were given.
+  const keys = push.keysFrom('a secret');
+  assert.equal(keys.publicKey.length, 65);
+  assert.equal(push.keysFrom('a secret').publicText, keys.publicText, 'the same secret always gives the same key');
+  assert.notEqual(push.keysFrom('another secret').publicText, keys.publicText);
+  const now = Date.parse('2026-11-07T04:00:00Z');
+  const m = /^vapid t=([^.]+)\.([^.]+)\.([^,]+), k=(.+)$/.exec(push.vapid(FCM + 'abc', keys, now));
+  assert.ok(m, 'the header has the token and the key');
+  assert.equal(m[4], keys.publicText);
+  const claims = JSON.parse(Buffer.from(m[2], 'base64url').toString());
+  assert.deepEqual(claims, { aud: 'https://fcm.googleapis.com', exp: now / 1000 + 12 * 3600, sub: 'https://www.squeekerant.online' });
+  const pub = crypto.createPublicKey({ key: { kty: 'EC', crv: 'P-256', x: keys.publicKey.subarray(1, 33).toString('base64url'), y: keys.publicKey.subarray(33).toString('base64url') }, format: 'jwk' });
+  assert.ok(crypto.verify('sha256', Buffer.from(m[1] + '.' + m[2]), { key: pub, dsaEncoding: 'ieee-p1363' }, Buffer.from(m[3], 'base64url')));
+});
+
+test('only the push services of real browsers can be signed up, never any other address', () => {
+  const browser = crypto.createECDH('prime256v1');
+  browser.generateKeys();
+  const keys = { p256dh: browser.getPublicKey().toString('base64url'), auth: crypto.randomBytes(16).toString('base64url') };
+  for (const endpoint of [FCM + 'dGVzdA:APA91b', 'https://updates.push.services.mozilla.com/wpush/v2/gAAAAAB', 'https://web.push.apple.com/QGuQyavXutnMoUBTz', 'https://wns2-par02p.notify.windows.com/w/?token=BQYAAAB']) {
+    const sub = push.cleanSubscription({ endpoint, keys });
+    assert.ok(sub, endpoint);
+    assert.equal(sub.p256dh, keys.p256dh);
+  }
+  for (const endpoint of ['http://fcm.googleapis.com/fcm/send/x', 'https://fcm.googleapis.com.evil.example/x', 'https://evil.example/fcm.googleapis.com', 'https://localhost/x', 'https://127.0.0.1/x', 'https://169.254.169.254/latest', 'https://fcm.googleapis.com:8443/x', 'https://user:pw@fcm.googleapis.com/x', 'ftp://fcm.googleapis.com/x', FCM + 'x'.repeat(2000), '', null, 5]) {
+    assert.equal(push.cleanSubscription({ endpoint, keys }), null, String(endpoint).slice(0, 60));
+    assert.equal(push.cleanEndpoint(endpoint), null, String(endpoint).slice(0, 60));
+  }
+  const bad = (k) => push.cleanSubscription({ endpoint: FCM + 'x', keys: Object.assign({}, keys, k) });
+  assert.equal(bad({ auth: crypto.randomBytes(8).toString('base64url') }), null, 'an auth secret of the wrong size');
+  assert.equal(bad({ p256dh: crypto.randomBytes(65).toString('base64url') }), null, 'a key that is not a point');
+  const offCurve = Buffer.concat([Buffer.from([4]), crypto.randomBytes(64)]);
+  assert.equal(bad({ p256dh: offCurve.toString('base64url') }), null, 'a point off the curve');
+  assert.equal(bad({ p256dh: '<script>' }), null);
+  assert.equal(push.cleanSubscription(null), null);
+});
+
+test('a browser signs up for alerts and off again, from the real site only, within limits', async () => {
+  const { call, store, clock } = setup();
+  const key = await call('GET', '/api/push/key');
+  assert.equal(key.json.key, push.keysFrom(Buffer.from('test secret').toString('hex')).publicText, 'the key comes from the same secret as the sessions');
+  const browser = crypto.createECDH('prime256v1');
+  browser.generateKeys();
+  const sub = { endpoint: FCM + 'one', keys: { p256dh: browser.getPublicKey().toString('base64url'), auth: crypto.randomBytes(16).toString('base64url') } };
+  assert.deepEqual((await call('POST', '/api/push/subscribe', sub)).json, { ok: true });
+  assert.deepEqual((await call('POST', '/api/push/subscribe', sub)).json, { ok: true }, 'the same browser again');
+  assert.equal(store.subs.size, 1);
+  assert.deepEqual([...store.subs.values()][0].p256dh, sub.keys.p256dh);
+  assert.equal((await call('POST', '/api/push/subscribe', { endpoint: 'https://evil.example/x', keys: sub.keys })).status, 400);
+  assert.equal((await call('POST', '/api/push/subscribe', sub, { host: 'evil.example' })).status, 403);
+  assert.deepEqual((await call('POST', '/api/push/unsubscribe', { endpoint: sub.endpoint })).json, { ok: true });
+  assert.equal(store.subs.size, 0);
+  assert.equal((await call('POST', '/api/push/unsubscribe', { endpoint: 'https://evil.example/x' })).status, 400);
+  let refused = null;
+  for (let i = 0; i < 40 && refused === null; i++) {
+    const r = await call('POST', '/api/push/subscribe', sub, { 'x-real-ip': '203.0.113.9' });
+    if (r.status === 429) refused = i;
+  }
+  assert.ok(refused !== null && refused >= 27, `one address can only change so much an hour (refused after ${refused})`);
+  clock.now += 3600000;
+  assert.equal((await call('POST', '/api/push/subscribe', sub, { 'x-real-ip': '203.0.113.9' })).status, 200, 'and again the next hour');
+  const closed = createApp({ store: closedStore, secret: Buffer.from('s') });
+  assert.deepEqual((await closed({ method: 'POST', path: '/api/push/subscribe', body: sub, headers: HOST })).json, { ok: false });
+});
+
+// A wheel with runs and sleeps of every length, read the way the game reads SqueekCore.
+function madeUpWheel(seed) {
+  const rng = WW.Rng(WW.hash32(seed));
+  const genesis = Date.parse('2026-11-01T00:00:00Z') / 1000;
+  const feed = new WW.LiveFeed({ genesis, core: '0x' + 'ab'.repeat(20), chainId: '11155111', installation: 'test-wheel', status: { measurement: { cumulativeWorkUnits: '0', rpmMilli: 0, freshness: 'online', coreStatus: 'IDLE' } }, settled: 1, work: 0, rpcs: [] });
+  feed.readFrom = 0;
+  feed.baseCum = 0;
+  feed.baseRound = 0;
+  const hex = () => Array.from({ length: 16 }, () => '0123456789abcdef'[Math.floor(rng.next() * 16)]).join('');
+  let r = 1;
+  let cum = 0;
+  for (const sleep of [30, 59, 60, 61, 89, 90, 95, 200, 12, 140, 6, 75, 3, 66]) {
+    r += sleep;
+    // A run, with rests of under an hour inside it.
+    for (let i = 0; i < 8; i++) {
+      if (i && rng.next() < 0.3) r += 1 + Math.floor(rng.next() * 4);
+      r++;
+      const work = 50 + Math.floor(rng.next() * 400);
+      cum += work;
+      feed.roundsKnown.set(r, { r, work, cum, hash: hex(), unknown: false });
+    }
+  }
+  feed.frontierCum = cum;
+  return { feed, end: r + 3 };
+}
+
+test('the server finds exactly the dreams the game gives every restaurant', () => {
+  const { feed, end } = madeUpWheel('dreams');
+  const t = feed.roundEnd(1) + 60000;
+  const s = E.newGame(t, feed, {});
+  feed.settledRound = end;
+  E.advance(s, feed, feed.roundEnd(end) + 60000);
+  const found = wheelReader.dreamsIn(WW, feed, 0);
+  assert.equal(found.length, 9, 'sleeps of 60 rounds or more: 60, 61, 89, 90, 95, 200, 140, 75 and 66');
+  assert.equal(found.filter((d) => d.gold).length, 4, '90 rounds or more: 90, 95, 200 and 140');
+  assert.equal(found.length, s.wakes, 'as many dreams as the game had');
+  const journal = {};
+  for (const d of found) {
+    const key = E.dreamDef(d.dream, d.gold).id;
+    journal[key] = (journal[key] || 0) + 1;
+  }
+  assert.deepEqual(journal, s.journal, 'the same dreams');
+  const last = found[found.length - 1];
+  assert.deepEqual({ key: E.dreamDef(last.dream, last.gold).id, round: last.round, gold: last.gold, sleptRounds: last.slept }, s.dreamDish, 'the same latest dream, round and sleep');
+  assert.equal(last.woke, feed.roundEnd(last.round - 1), 'he woke during that round');
+  assert.deepEqual([last.wheel, last.core, last.chain], ['test-wheel', '0x' + 'ab'.repeat(20), '11155111']);
+  // Read again from a dream already kept, that one is left out and the later ones are the same.
+  const later = wheelReader.dreamsIn(WW, feed, found[5].round - 1);
+  assert.deepEqual(later, found.slice(6));
+});
+
+test('the wheel reader loads the game in the build\'s own order', () => {
+  const fs = require('fs');
+  const build = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'build.js'), 'utf8');
+  const order = Array.from(build.match(/const ORDER = \[(.+)\];/)[1].matchAll(/'([^']+\.js)'/g), (m) => m[1]);
+  let at = -1;
+  for (const file of wheelReader.FILES) {
+    const i = order.indexOf(file);
+    assert.ok(i > at, `${file} comes after the one before it in the build`);
+    at = i;
+  }
+  const world = wheelReader.world();
+  assert.equal(world.DREAMS.length, WW.DREAMS.length);
+  assert.equal(wheelReader.dreamDish(3, true).n, E.dreamDef(3, true).n);
+});
+
+// A wheel that only says what it was told, and counts how often it was read.
+function toldWheel(dreams) {
+  return {
+    reads: 0,
+    async read(from) {
+      this.reads++;
+      // Read like the game, 320 rounds back from the latest settled one.
+      const start = from === null ? 600 - 320 : from;
+      return { wheel: 'test-wheel', core: '0x' + 'ab'.repeat(20), settled: 600, from: start, dreams: dreams.filter((d) => d.round > start) };
+    },
+    dreamDish: (i, g) => E.dreamDef(i, g),
+  };
+}
+const dreamAt = (round, woke, slept = 120) => ({ wheel: 'test-wheel', core: '0x' + 'ab'.repeat(20), chain: '11155111', round, hash: crypto.createHash('sha256').update(String(round)).digest('hex').slice(0, 16), dream: round % 24, gold: slept >= 90, slept, woke });
+// A store that writes down every call to it.
+function watched(store) {
+  const calls = [];
+  return { calls, store: new Proxy(store, { get: (o, k) => (typeof o[k] === 'function' ? (...a) => (calls.push(k), o[k](...a)) : o[k]) }) };
+}
+
+test('an alert goes out once, soon after he wakes, and the database rests the rest of the day', async () => {
+  const now = Date.parse('2026-11-07T04:00:00Z');
+  const clock = { now };
+  const base = memoryStore();
+  const { calls, store } = watched(base);
+  for (let i = 1; i <= 3; i++) await base.addSub({ endpoint: FCM + i, p256dh: 'k' + i, auth: 'a' + i }, now);
+  await base.addSub({ endpoint: 'https://updates.push.services.mozilla.com/wpush/v2/gone', p256dh: 'k', auth: 'a' }, now);
+  const sent = [];
+  const send = async (sub, message) => {
+    sent.push([sub.endpoint, message]);
+    return sub.endpoint.endsWith('gone') ? 410 : sub.endpoint.endsWith('2') ? 500 : 201;
+  };
+
+  // He woke five hours ago: nothing to send, and the database is not even asked.
+  const old = toldWheel([dreamAt(300, now - 30 * 3600000), dreamAt(480, now - 5 * 3600000)]);
+  const quiet = createWake({ store, wheel: old, send, clock: () => clock.now });
+  const r1 = await quiet.check();
+  assert.equal(r1.ok, true);
+  assert.equal(r1.latest.id, '2026-11-06-480');
+  assert.deepEqual(calls, [], 'no database while no alert is due');
+  assert.equal(sent.length, 0);
+
+  // He woke ten minutes ago.
+  const fresh = toldWheel([dreamAt(300, now - 30 * 3600000), dreamAt(480, now - 5 * 3600000), dreamAt(510, now - 600000, 95)]);
+  const wake = createWake({ store, wheel: fresh, send, clock: () => clock.now });
+  const r2 = await wake.check();
+  assert.equal(r2.latest.id, '2026-11-07-510');
+  assert.equal(r2.sent, 2, 'two browsers took it, one failed for now');
+  assert.equal(r2.gone, 1);
+  assert.equal(sent.length, 4);
+  const words = sent[0][1];
+  assert.equal(words.title, 'Squeektoshi is awake');
+  assert.equal(words.body, `He slept 15.8 hours and dreamed of ${E.dreamDef(510 % 24, true).n}. Your guests are on their way.`);
+  assert.equal(words.image, 'https://www.squeekerant.online/dreams/2026-11-07-510.png');
+  assert.equal(words.url, '/?from=alert');
+  assert.ok(!base.subs.has('https://updates.push.services.mozilla.com/wpush/v2/gone'), 'a browser that is gone is dropped');
+  assert.equal(base.subs.size, 3, 'a browser that only failed this time is kept');
+  const kept = await base.dreams();
+  assert.deepEqual(kept.map((d) => [d.round, d.done, d.sent]), [[510, true, 2], [480, true, 0], [300, true, 0]], 'every dream is kept, the old ones with no alert');
+
+  // Asked again, by this server or a new one: nothing more goes out.
+  clock.now += CHECK_GAP_MS + 1000;
+  assert.equal((await wake.check()).sent, 0);
+  assert.equal((await createWake({ store, wheel: fresh, send, clock: () => clock.now }).check()).sent, 0);
+  assert.equal(sent.length, 4);
+  // Asked many times at once, the wheel is read once.
+  const busy = toldWheel([dreamAt(510, now - 600000, 95)]);
+  const once = createWake({ store, wheel: busy, send, clock: () => clock.now });
+  await Promise.all([once.check(), once.check(), once.check()]);
+  assert.equal(busy.reads, 1);
+  // Three hours on, it is old news.
+  clock.now = now + WINDOW_MS + 60000;
+  calls.length = 0;
+  await createWake({ store, wheel: fresh, send, clock: () => clock.now }).check();
+  assert.deepEqual(calls, [], 'no database three hours on');
+});
+
+test('two servers at once send an alert only once, and a long list of browsers goes out over several looks', async () => {
+  const now = Date.parse('2026-11-07T04:00:00Z');
+  const store = memoryStore();
+  for (let i = 1; i <= BATCH + 20; i++) await store.addSub({ endpoint: FCM + i, p256dh: 'k', auth: 'a' }, now);
+  const got = new Map();
+  const send = async (sub) => {
+    got.set(sub.endpoint, (got.get(sub.endpoint) || 0) + 1);
+    await new Promise((r) => setTimeout(r, 1));
+    return 201;
+  };
+  const told = toldWheel([dreamAt(510, now - 600000)]);
+  const a = createWake({ store, wheel: told, send, clock: () => now });
+  const b = createWake({ store, wheel: told, send, clock: () => now });
+  const [ra, rb] = await Promise.all([a.check(), b.check()]);
+  assert.equal(ra.sent + rb.sent, BATCH, 'one batch, by whichever server got there first');
+  assert.ok([...got.values()].every((n) => n === 1), 'nobody twice');
+  const c = createWake({ store, wheel: told, send, clock: () => now + 120000 });
+  assert.equal((await c.check()).sent, 20, 'the rest on the next look');
+  assert.equal(got.size, BATCH + 20);
+  assert.ok([...got.values()].every((n) => n === 1));
+  assert.equal((await store.dreams())[0].done, true);
+});
+
+test('the dreams page lists every dream with what anyone needs to check it, and each has its own picture', async () => {
+  const now = Date.parse('2026-11-07T04:00:00Z');
+  const store = memoryStore();
+  const told = toldWheel([dreamAt(186, Date.parse('2026-11-05T02:40:00Z'), 185), dreamAt(337, Date.parse('2026-11-06T03:50:00Z'), 126), dreamAt(479, Date.parse('2026-11-07T03:30:00Z'), 64)]);
+  const handle = createApp({ store, secret: Buffer.from('s'), clock: () => now, wheel: told, send: async () => 201 });
+  const get = (p) => handle({ method: 'GET', path: p, headers: HOST });
+  const list = await get('/dreams');
+  assert.equal(list.status, 200);
+  const html = list.html;
+  const names = [479, 337, 186].map((r) => E.dreamDef(r % 24, r !== 479).n);
+  let at = -1;
+  for (const n of names) {
+    const i = html.indexOf(`<h2>${n}`);
+    assert.ok(i > at, `${n} is listed, newest first`);
+    at = i;
+  }
+  assert.ok(html.includes(dreamAt(479).hash) && html.includes('Round 479'), 'its round and hash');
+  assert.ok(html.includes('0x' + 'ab'.repeat(20)), 'the whole contract address');
+  assert.ok(html.includes('https://sepolia.etherscan.io/address/0x' + 'ab'.repeat(20)));
+  assert.ok(html.includes('roundPage(uint64,uint64,uint256)') && html.includes("hash32(hash, 'dream') % 24"));
+  assert.ok(html.includes('href="/dreams/2026-11-07-479"'));
+  assert.ok(html.includes('https://x.com/intent/post?text='));
+  assert.ok(html.includes('content="https://www.squeekerant.online/dreams/2026-11-07-479.png"'), 'the newest picture for link previews');
+  assert.ok(!/[ăđơưĂĐƠƯẠ-ỹ]/.test(html), 'English only');
+  const page = await get('/dreams/2026-11-07-479');
+  assert.equal(page.status, 200);
+  assert.ok(page.html.includes('<meta property="og:image" content="https://www.squeekerant.online/dreams/2026-11-07-479.png">'));
+  assert.ok(page.html.includes('<meta name="twitter:card" content="summary_large_image">'));
+  assert.ok(page.html.includes('slept 10.7 hours'));
+  const png = await get('/dreams/2026-11-07-479.png');
+  assert.equal(png.type, 'image/png');
+  assert.equal(png.body.readUInt32BE(16), 1200);
+  assert.equal(png.body.readUInt32BE(20), 630);
+  assert.match(png.cache, /immutable/);
+  for (const p of ['/dreams/2026-11-07-478', '/dreams/2026-11-06-479', '/dreams/2026-11-07-479.jpg', '/dreams/../api/board', '/dreams/x']) assert.equal((await get(p)).status, 404, p);
+  assert.equal((await get('/dreams/2026-11-07-478.png')).status, 404);
+});
+
+test('his dreams are checked every 15 minutes, as often as the free plan allows, and their pages reach the server', () => {
+  const fs = require('fs');
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8'));
+  assert.deepEqual(config.schedules['wake-check'], { schedule: '*/15 * * * *', path: '/api/wake/check' });
+  for (const source of ['/dreams', '/dreams/(.*)']) assert.ok(config.rewrites.some((r) => r.source === source && r.destination === '/api/index'), source);
+  const sw = fs.readFileSync(path.join(src, 'ui/sw.js'), 'utf8');
+  for (const event of ['push', 'notificationclick', 'pushsubscriptionchange']) assert.ok(sw.includes(`addEventListener('${event}'`), event);
+  for (const step of ['alerts_on', 'alert_opened']) assert.deepEqual(rules.cleanSteps({ steps: [step] }), [step], step);
+});

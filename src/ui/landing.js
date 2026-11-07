@@ -42,6 +42,8 @@
       this.logo = document.getElementById('landingLogo');
       this.card = document.getElementById('landingCard');
       this.status = document.getElementById('landingStatus');
+      this.pitch = document.getElementById('landingPitch');
+      this.sleep = document.getElementById('landingSleep');
       this.canvas = document.getElementById('landingArt');
       this.open = false;
       this.key = null;
@@ -70,6 +72,7 @@
       this.root.hidden = false;
       this.root.classList.toggle('bare', !!bare);
       document.body.classList.add('landing');
+      this.pitch.textContent = WW.tr('A free pixel restaurant game, run live by a real hamster on a real wheel.');
       if (!this.scene) {
         this.scene = new WW.Scene(this.canvas, this.stage);
         this.scene.view = 'out';
@@ -139,6 +142,34 @@
       const words = { running: 'Squeektoshi is running right now.', breather: 'Squeektoshi is catching his breath.', quiet: this.sleepWords(state === 'quiet' && g.feed.quietUpTo ? g.feed.quietUpTo(settled) : 0) }[state];
       const dots = { running: 'var(--leaf)', breather: 'var(--butter)', quiet: 'var(--lilac)' }[state];
       this.status.replaceChildren(...(words ? [el('span', { class: 'dot', style: `background:${dots}` }), el('span', null, words)] : []));
+      // Asleep, which is most of the day: an empty restaurant is normal, and when he last ran says roughly when guests come.
+      const run = state === 'quiet' ? this.lastRun() : null;
+      this.sleep.textContent = state === 'quiet' ? [WW.tr('Guests come when he runs, even with the game closed.'), run ? WW.tr(this.runWords(run)) : ''].join(' ').trim() : '';
+      this.draw();
+    }
+    // His latest run in the rounds read: the last round with passes, back to the first one with no rest of an hour or more before it.
+    lastRun() {
+      const f = this.game.feed;
+      if (f.mode !== 'live' || !f.roundsKnown) return null;
+      const active = [...f.roundsKnown.values()].filter((i) => i.work > 0).map((i) => i.r).sort((a, b) => a - b);
+      if (!active.length) return null;
+      const end = active[active.length - 1];
+      let start = end;
+      for (let i = active.length - 2; i >= 0 && start - active[i] - 1 < WW.CFG.NAP_ROUNDS; i--) start = active[i];
+      return { from: f.roundEnd(start - 1), to: f.roundEnd(end) };
+    }
+    // In the reader's own time, to the 10 minutes a round lasts.
+    runWords({ from, to }) {
+      const time = (t) => {
+        const d = new Date(t);
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      };
+      const d = new Date(from);
+      const today = new Date();
+      const dayOf = (x) => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+      // Always in English words here, whatever language the browser speaks. The test build translates the whole line.
+      const day = dayOf(d) === dayOf(today) ? 'today' : dayOf(d) === dayOf(new Date(today.getTime() - 86400000)) ? 'yesterday' : 'on ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+      return `He last ran ${day}, from about ${time(from)} to ${time(to)}.`;
     }
     sleepWords(rounds) {
       const CFG = WW.CFG;
@@ -151,14 +182,18 @@
     draw() {
       const g = this.game;
       const w = g.wallet;
-      const key = JSON.stringify([w.connected() ? w.address : null, !!g.s, g.canInstall() && !g.hasMouse]);
+      // While he sleeps, an alert can say when he wakes.
+      const offer = g.feed.mode === 'live' && g.live && g.live.state === 'quiet' && !!g.alerts && g.alerts.offered() && !g.alerts.busy;
+      const key = JSON.stringify([w.connected() ? w.address : null, !!g.s, g.canInstall() && !g.hasMouse, offer]);
       if (key === this.key) return;
       this.key = key;
       const parts = [];
+      // Playing comes first. A wallet is only for the leaderboard.
+      const play = el('button', { class: 'btn tomato', type: 'button', id: 'landingPlay', on: { click: () => this.enter() } }, g.s ? 'Keep playing' : 'Play');
       if (w.connected()) {
         parts.push(
           el('div', { class: 'landingwallet' }, el('span', { class: 'note' }, 'Your wallet'), el('button', { class: 'addr tabnum', type: 'button', 'aria-label': 'Copy address', on: { click: () => g.copyText(w.address, 'Address copied.') } }, w.address)),
-          btn(g.s ? 'Keep playing' : 'Play', () => this.enter(), 'tomato', false),
+          play,
           btn('Disconnect', () => {
             g.sound('tap');
             w.disconnect();
@@ -167,11 +202,12 @@
         );
       } else {
         parts.push(
-          el('button', { class: 'btn tomato', type: 'button', id: 'landingConnect', on: { click: () => this.connect() } }, img(WW.iconCanvas('wallet'), '', ''), 'Connect wallet'),
-          btn(g.s ? 'Keep playing without a wallet' : 'Play without a wallet', () => this.enter(), 'plain'),
-          el('p', { class: 'note' }, 'Only restaurants with a connected wallet are on the leaderboard. You only sign a message. It costs nothing and sends no transaction.')
+          play,
+          el('button', { class: 'btn plain', type: 'button', id: 'landingConnect', on: { click: () => this.connect() } }, img(WW.iconCanvas('wallet'), '', ''), 'Connect wallet'),
+          el('p', { class: 'note' }, 'A wallet only puts your restaurant on the leaderboard. You sign a message, with no fee and no transaction.')
         );
       }
+      if (offer) parts.push(btn('Tell me when he wakes up', () => g.alerts.turnOn(), 'plain small'));
       // On a phone the game can go on the home screen.
       if (g.canInstall() && !g.hasMouse) parts.push(btn('Install the game', () => g.install(), 'plain small'));
       parts.push(el('p', { class: 'note' }, WW.updatesLink()));

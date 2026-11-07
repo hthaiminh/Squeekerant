@@ -232,6 +232,7 @@
       this.mode = 'live';
       this.genesisMs = boot.genesis * 1000;
       this.core = boot.core;
+      this.chainId = boot.chainId;
       this.rpcs = boot.rpcs;
       this.installation = boot.installation;
       this.status = boot.status;
@@ -265,6 +266,7 @@
       if (!rpcs) throw new Error('No node for this chain.');
       const boot = {
         core: wheel.core,
+        chainId: String(wheel.chainId),
         installation: status.installationId,
         genesis: wheel.genesis,
         status,

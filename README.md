@@ -52,7 +52,7 @@ Trees and floors always pay cash, with a small chance of an ingredient, a bit of
 
 ## The way in
 
-The landing page comes first on every visit: the name, drawn by hand in `src/art/logo.js`, the game's own woods at the real hour, with your restaurant in them when you have one, and two ways in, with a wallet or without. The restaurant stands still behind it. Disconnecting a wallet comes back here.
+The landing page comes first on every visit: the name, drawn by hand in `src/art/logo.js`, one line saying what the game is, the game's own woods at the real hour, with your restaurant in them when you have one, and the way in. Play comes first. Connecting a wallet comes second, since it is only for the leaderboard. While he sleeps, which is most of the day, it says that guests come when he runs, even with the game closed, and when he last ran in the reader's own time, and it offers a wake up alert. The restaurant stands still behind it. Disconnecting a wallet comes back here. A restaurant opened while he sleeps gets a card saying the same, with the same offer.
 
 Anyone with no restaurant is offered the practice kitchen before naming one, and can skip it. It is a throwaway save on the real rules and the real screens, run by `PracticeFeed`, a pretend hamster the lesson tells when to run and sleep and how fast time goes. A coach (`src/ui/practice.js`) walks through 26 steps and a ring marks what to press. Nothing there is saved or sent to the board, and a real restaurant is put aside and comes back as it was. How To Play, the sixth tab, has everything in short and can open the practice kitchen again.
 
@@ -66,6 +66,22 @@ The server has only those three fonts, so a letter none of them can draw, an emo
 
 The data is kept in the `pictures` table (id, when, data), with nothing about who made it. Only the newest 20,000 are kept, an address can make 20 an hour and the whole site 2,000 a day. An address with no picture behind it still opens and shows the game's own preview. The picture for a link never changes, so it is cached for good. If the server cannot make a link, the post links the site instead and the game says so.
 
+## His dreams
+
+https://www.squeekerant.online/dreams lists every Dream Dish, newest first, with the time he woke, how long he slept, the round and its hash, and a check it yourself part naming the wheel's contract, the function that reads the rounds (`roundPage(uint64,uint64,uint256)`) and the rule (`hash32(hash, 'dream') % 24`). Each dream has its own page, `/dreams/<day>-<round>`, and its own picture, `/dreams/<day>-<round>.png`, painted with the game's art, so posting the link on X shows the picture. The day (UTC) and the round together never come round again, even if Squeekchain starts a new wheel.
+
+The server finds the dreams with the game's own code: `server/wheel.js` loads the game's reader of SqueekCore and its dream rule, reads the rounds the way the game does and takes every round with passes after 60 quiet ones or more. A test runs the real engine on made up rounds and checks that the server finds exactly the dreams the game gives. They are kept in the `dreams` table. The page looks for new ones at most every five minutes and is cached for five.
+
+## Wake up alerts
+
+A player can ask to be told when he wakes up from a long sleep: from the welcome page while he sleeps, from the card after opening a restaurant while he sleeps, or in How To Play, where they can also be turned off. The browser asks first. The alert says how long he slept and what he dreamed of, with the dream's picture, and opens the game. On an iPhone or iPad, alerts only work for the game on the home screen, so the button shows how to put it there first.
+
+These are the browsers' own push messages (`src/core/alerts.js`, the service worker `src/ui/sw.js`, `server/push.js`). The server encrypts each one for the one browser it goes to (RFC 8291, checked against the RFC's own example in the tests) and signs it with the site's key (RFC 8292), using nothing but node's crypto. The key pair is made from the database's secret, like the sessions, so there is nothing to set up. A browser that signed up under an old key signs up again by itself.
+
+Vercel's Schedules (`vercel.json`, every 15 minutes, the most the free plan allows, about 3,000 runs a month of the 5,000 it gives) post to `/api/wake/check`, and so does any game that has just seen his dream. That looks at the wheel, which needs no database. Only within three hours of his waking is the database asked, to keep the dream and send its alerts, so it can sleep the rest of the day. Anyone may call it: the answer is the same, the server looks at most every 20 seconds, and a dream's alert only ever goes out once, even with two servers at once.
+
+The `push_subs` table keeps only where each browser's push service takes messages for it and the keys to encrypt to, nothing about who. Only addresses of the push services of real browsers are taken (Google, Mozilla, Apple, Microsoft), so the server can never be made to post anywhere else. A browser that is gone is dropped the first time its push service says so. One address can sign up or off 30 times an hour.
+
 ## The link preview
 
 A link to the site shows a picture and a line of text on X, Discord and Telegram. `scripts/build.js` writes the tags into the page head, and the picture is `src/ui/og.png`, 1200 by 630, painted from the game itself: a dressed level 24 restaurant on a spring day with him running. The build copies it next to the page, and the public build stops if it is missing.
@@ -76,7 +92,7 @@ https://www.squeekerant.online/updates lists every release, newest first, from `
 
 ## Counts
 
-To see how far people get, the game counts a few steps: opening the page for the first time, connecting a wallet, starting, finishing or leaving the practice kitchen and each of its steps, opening a real restaurant, a first real guest, a first Dream Dish, playing today, still coming back after 1, 3, 7, 14 and 30 days, and using the share picture. The full list is in `server/rules.js`, and nothing else is stored.
+To see how far people get, the game counts a few steps: opening the page for the first time, connecting a wallet, starting, finishing or leaving the practice kitchen and each of its steps, opening a real restaurant, a first real guest, a first Dream Dish, playing today, still coming back after 1, 3, 7, 14 and 30 days, using the share picture, save codes, installing the game, turning on wake up alerts and opening the game from one. The full list is in `server/rules.js`, and nothing else is stored.
 
 Only a number per step per day reaches the server, in the `counts` table (day, step, n). There is no address, no name, no cookie and nothing kept about the request. The browser keeps a short list under `squeekerant-counted` of what it has already counted, so each browser counts each step once (playing today once a day), and it sends what it has in one small request, so a visit wakes the database once at most. Browsers run by a program, test browsers included, and the Artifact preview never count.
 
@@ -125,19 +141,19 @@ The game itself needs nothing installed. The leaderboard's server needs `npm ins
 
 ## Going live
 
-`vercel deploy --prod` from this folder. `vercel.json` builds `public/index.html`, the only file visitors get, and serves `api/index.js` as one function for `/api/` and the picture links under `/p/`. The function carries `src` with it, for painting pictures. `dist/vi` is only for testing and never goes up.
+`vercel deploy --prod` from this folder. `vercel.json` builds `public/index.html`, the only file visitors get, and serves `api/index.js` as one function for `/api/`, the picture links under `/p/` and his dreams under `/dreams`. The function carries `src` with it, for painting pictures and reading the wheel with the game's own code. `vercel.json` also holds the schedule that looks for his waking every 15 minutes. Schedules are in beta, and Vercel says a deploy that declares them fails if the team does not have them yet: without the `schedules` block, alerts still go out whenever a game sees his dream. `dist/vi` is only for testing and never goes up.
 
 The board needs a Postgres database, its address in the `DATABASE_URL` setting on Vercel, and one more deploy to pick it up. The tables make themselves. Until then the game says the board is not open yet, and everything else works.
 
 ## Layout
 
-- `src/core`: rules (`engine.js`), data sources including the practice kitchen's pretend hamster (`feed.js`), the wallet and the board (`wallet.js`), the anonymous counts (`counter.js`), seeded random numbers.
+- `src/core`: rules (`engine.js`), data sources including the practice kitchen's pretend hamster (`feed.js`), the wallet and the board (`wallet.js`), the anonymous counts (`counter.js`), save codes, wake up alerts on this device (`alerts.js`), seeded random numbers.
 - `src/data`: guests, food, decor, the world outside with its seasons and weather, the recording.
 - `src/art`: pixel painters, nothing is an image file. `houses.js` paints every building part.
 - `src/ui`: the landing page, the canvas world with its three places and camera, panels, the carousel game, the practice kitchen, the share picture, sound and music, start up. `og.png` is the link preview picture.
 - `src/lang`: the Vietnamese test build, left out of the plain build.
 - `src/fonts`: the page's three fonts, for the server's pictures, each with its SIL Open Font License.
-- `server`, `api`: the leaderboard's server, sign in, the rules for a score, the counts and the shared pictures.
+- `server`, `api`: the leaderboard's server, sign in, the rules for a score, the counts, the shared pictures, the wheel read with the game's own code (`wheel.js`), his dreams and their alerts (`wake.js`, `dreams.js`) and the push messages (`push.js`).
 
 ## Not built yet
 

@@ -33,7 +33,7 @@ const APP_FILES = ['manifest.webmanifest', 'sw.js', 'app-192.png', 'app-512.png'
 const vi = process.argv[2] === 'vi';
 const pub = process.argv[2] === 'public';
 
-const ORDER = ['core/rng.js', 'art/px.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'art/animals.js', 'art/food.js', 'art/hamster.js', 'art/scene.js', 'art/outside.js', 'art/houses.js', 'art/logo.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', 'core/counter.js', 'core/savecode.js', ...(vi ? ['lang/vi.js'] : []), 'ui/sound.js', 'ui/music.js', 'ui/panels.js', 'ui/scene.js', 'ui/line.js', 'ui/landing.js', 'ui/share.js', 'ui/practice.js', 'ui/main.js'];
+const ORDER = ['core/rng.js', 'art/px.js', 'data/recording.js', 'data/animals.js', 'data/food.js', 'data/outside.js', 'data/decor.js', 'art/animals.js', 'art/food.js', 'art/hamster.js', 'art/scene.js', 'art/outside.js', 'art/houses.js', 'art/logo.js', 'core/feed.js', 'core/engine.js', 'core/wallet.js', 'core/counter.js', 'core/savecode.js', 'core/alerts.js', ...(vi ? ['lang/vi.js'] : []), 'ui/sound.js', 'ui/music.js', 'ui/panels.js', 'ui/scene.js', 'ui/line.js', 'ui/landing.js', 'ui/share.js', 'ui/practice.js', 'ui/main.js'];
 
 // The releases on /updates. The game links there and shows the latest number.
 const { updatesPage } = require('./updates-page');

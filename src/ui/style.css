@@ -329,7 +329,7 @@ input[type=text] { width: 100%; background: var(--paper); border: 0; padding: 6p
 /* The landing page: the game's own woods, the name above and the way in below */
 #landing { position: fixed; inset: 0; z-index: 28; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 12px; padding: max(14px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: #9fd8f0; overflow-y: auto; }
 #landing[hidden] { display: none; }
-#landing.bare #landingCard, #landing.bare #landingStatus { visibility: hidden; }
+#landing.bare #landingCard, #landing.bare #landingStatus, #landing.bare #landingSleep { visibility: hidden; }
 #landingArt { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 .landingtop, .landingcard { position: relative; }
 .landingtop { display: grid; justify-items: center; gap: 8px; }
@@ -338,6 +338,11 @@ input[type=text] { width: 100%; background: var(--paper); border: 0; padding: 6p
 #landingStatus { display: flex; align-items: center; gap: 6px; padding: 2px 8px; color: var(--paper); font-size: 18px; line-height: 1.1; background: var(--ink); text-align: center; }
 #landingStatus:empty { display: none; }
 #landingStatus .dot { flex: none; width: 8px; height: 8px; }
+/* What the game is, in one line, and while he sleeps what that means for you. */
+#landingPitch, #landingSleep { max-width: min(440px, 100%); margin: 0; padding: 2px 8px; color: var(--paper); font-size: 18px; line-height: 1.15; text-align: center; background: rgba(58, 35, 64, 0.82); }
+#landingPitch { color: var(--butter); }
+#landingSleep { font-size: 17px; }
+#landingPitch:empty, #landingSleep:empty { display: none; }
 .landingcard { display: grid; gap: 8px; width: min(420px, 100%); padding: 14px; background: var(--paper); box-shadow: 0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px 0 0 var(--ink), 3px 0 0 var(--ink), 8px 8px 0 2px rgba(58, 35, 64, 0.4); }
 .landingcard .btn { margin: 3px; min-height: 44px; font-size: 24px; }
 .landingcard .btn.small { min-height: 30px; font-size: 20px; justify-self: center; }
@@ -427,4 +432,6 @@ body.practice #toasts { bottom: 240px; }
   .landingcard .btn { min-height: 36px; font-size: 21px; margin: 2px; }
   .landingcard .btn.small { min-height: 28px; font-size: 18px; }
   .landingcard .note { font-size: 15px; line-height: 1.1; }
+  .landingtop { gap: 4px; }
+  #landingPitch, #landingSleep { font-size: 15px; line-height: 1.1; }
 }

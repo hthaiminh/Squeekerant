@@ -1,5 +1,15 @@
 [
   {
+    "v": "0.0.10",
+    "date": "2026-11-07",
+    "title": "Good morning",
+    "items": [
+      { "big": true, "kind": "new", "title": "Wake up alerts", "text": "Turn them on from the welcome page or How To Play, and your phone or computer tells you when Squeektoshi wakes up from a long sleep, with the dream he had. On an iPhone or iPad, put the game on your home screen first." },
+      { "big": true, "kind": "new", "title": "Every dream so far", "text": "A new page lists every Dream Dish with the round he woke on and its hash on the chain, so anyone can check that nobody picked it and every restaurant got the same one. Each dream has its own picture to post." },
+      { "kind": "better", "text": "The welcome page says what the game is and puts Play first. While he sleeps it says when he last ran, and that your restaurant serves on its own when he runs, even with the game closed." }
+    ]
+  },
+  {
     "v": "0.0.9",
     "date": "2026-11-06",
     "title": "Take it with you",

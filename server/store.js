@@ -41,9 +41,43 @@ const TABLES = [
     pic jsonb NOT NULL
   )`,
   'CREATE INDEX IF NOT EXISTS pictures_made ON pictures (made)',
+  // Browsers that asked for wake up alerts: where their push service takes messages for them, and the keys to encrypt to.
+  // Nothing here says who, and the address only works for sending to that one browser.
+  `CREATE TABLE IF NOT EXISTS push_subs (
+    id bigserial PRIMARY KEY,
+    endpoint text NOT NULL UNIQUE,
+    p256dh text NOT NULL,
+    auth text NOT NULL,
+    made timestamptz NOT NULL,
+    seen timestamptz NOT NULL
+  )`,
+  // Every Dream Dish, as the game's own rule finds it in the wheel's rounds, and how far its alert has gone out.
+  `CREATE TABLE IF NOT EXISTS dreams (
+    wheel text NOT NULL,
+    core text NOT NULL,
+    chain text NOT NULL,
+    round integer NOT NULL,
+    hash text NOT NULL,
+    dream integer NOT NULL,
+    gold boolean NOT NULL,
+    slept integer NOT NULL,
+    woke timestamptz NOT NULL,
+    found timestamptz NOT NULL,
+    done boolean NOT NULL,
+    sent integer NOT NULL DEFAULT 0,
+    sent_to bigint NOT NULL DEFAULT 0,
+    held_until timestamptz,
+    PRIMARY KEY (wheel, round)
+  )`,
+  'CREATE INDEX IF NOT EXISTS dreams_woke ON dreams (woke DESC)',
 ];
 // Only the newest pictures are kept. An older link still opens, with the game's own picture.
 const KEEP_PICTURES = 20000;
+// A ceiling on browsers with alerts, so a flood of made up ones cannot fill the database.
+const MOST_SUBS = 100000;
+const DREAMS_LISTED = 500;
+const dreamRow = (r) => ({ wheel: r.wheel, core: r.core, chain: r.chain, round: Number(r.round), hash: r.hash, dream: Number(r.dream), gold: !!r.gold, slept: Number(r.slept), woke: new Date(r.woke).getTime(), done: !!r.done, sent: Number(r.sent) });
+const DREAM_COLUMNS = 'wheel, core, chain, round, hash, dream, gold, slept, woke, done, sent';
 
 // `query(text, params)` runs one statement and gives back its rows.
 function sqlStore(query) {
@@ -132,6 +166,69 @@ function sqlStore(query) {
       const rows = await query('SELECT count(*) AS n FROM pictures WHERE made >= $1::date', [dayOf(now)]);
       return Number(rows[0].n);
     },
+    // A browser that said yes. The same browser again only refreshes its keys.
+    async addSub(sub, now) {
+      await prepare();
+      const at = new Date(now).toISOString();
+      const known = await query('SELECT 1 FROM push_subs WHERE endpoint = $1', [sub.endpoint]);
+      if (!known.length && Number((await query('SELECT count(*) AS n FROM push_subs', []))[0].n) >= MOST_SUBS) return false;
+      await query(
+        `INSERT INTO push_subs (endpoint, p256dh, auth, made, seen) VALUES ($1, $2, $3, $4, $4)
+         ON CONFLICT (endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, seen = excluded.seen`,
+        [sub.endpoint, sub.p256dh, sub.auth, at]
+      );
+      return true;
+    },
+    async dropSub(endpoint) {
+      await prepare();
+      await query('DELETE FROM push_subs WHERE endpoint = $1', [endpoint]);
+    },
+    async subsAfter(id, limit) {
+      await prepare();
+      const rows = await query(`SELECT id, endpoint, p256dh, auth FROM push_subs WHERE id > $1 ORDER BY id LIMIT ${Math.floor(limit)}`, [id]);
+      return rows.map((r) => ({ id: Number(r.id), endpoint: r.endpoint, p256dh: r.p256dh, auth: r.auth }));
+    },
+    async lastDream(wheel) {
+      await prepare();
+      const rows = await query('SELECT round FROM dreams WHERE wheel = $1 ORDER BY round DESC LIMIT 1', [wheel]);
+      return rows.length ? Number(rows[0].round) : null;
+    },
+    // Dreams found in the rounds. One that woke before `oldFrom` is too old for an alert and is kept as already done.
+    async addDreams(list, now, oldFrom) {
+      await prepare();
+      for (const d of list) {
+        await query(
+          `INSERT INTO dreams (wheel, core, chain, round, hash, dream, gold, slept, woke, found, done) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           ON CONFLICT (wheel, round) DO NOTHING`,
+          [d.wheel, d.core, d.chain, d.round, d.hash, d.dream, d.gold, d.slept, new Date(d.woke).toISOString(), new Date(now).toISOString(), d.woke < oldFrom]
+        );
+      }
+    },
+    // Only one sender at a time works on a dream's alert. Gives back how far it has gone, or null when someone else has it or it is done.
+    async claimDream(wheel, round, now, holdMs) {
+      await prepare();
+      const rows = await query(
+        `UPDATE dreams SET held_until = $4 WHERE wheel = $1 AND round = $2 AND NOT done AND (held_until IS NULL OR held_until < $3)
+         RETURNING sent, sent_to`,
+        [wheel, round, new Date(now).toISOString(), new Date(now + holdMs).toISOString()]
+      );
+      return rows.length ? { sent: Number(rows[0].sent), sentTo: Number(rows[0].sent_to) } : null;
+    },
+    async dreamSent(wheel, round, sentTo, sent, done) {
+      await prepare();
+      await query('UPDATE dreams SET sent = sent + $3, sent_to = $4, done = $5, held_until = NULL WHERE wheel = $1 AND round = $2', [wheel, round, sent, sentTo, done]);
+    },
+    async dreams() {
+      await prepare();
+      const rows = await query(`SELECT ${DREAM_COLUMNS} FROM dreams ORDER BY woke DESC LIMIT ${DREAMS_LISTED}`, []);
+      return rows.map(dreamRow);
+    },
+    // One dream by its round and the day (UTC) he woke, which together never repeat even if the wheel starts again.
+    async dream(round, day) {
+      await prepare();
+      const rows = await query(`SELECT ${DREAM_COLUMNS} FROM dreams WHERE round = $1 AND to_char(woke AT TIME ZONE 'UTC', 'YYYY-MM-DD') = $2 LIMIT 1`, [round, day]);
+      return rows.length ? dreamRow(rows[0]) : null;
+    },
     async board() {
       await prepare();
       const rows = await query(
@@ -152,11 +249,59 @@ function memoryStore() {
   const players = new Map();
   const counted = new Map();
   const pictures = new Map();
+  const subs = new Map();
+  const dreams = new Map();
+  let nextSub = 1;
   const sorted = () => Array.from(players.values()).filter((p) => !p.hidden).sort((a, b) => b.total - a.total || a.reachedAt - b.reachedAt);
+  const dreamKey = (wheel, round) => wheel + ' ' + round;
+  const plainDream = (d) => ({ wheel: d.wheel, core: d.core, chain: d.chain, round: d.round, hash: d.hash, dream: d.dream, gold: d.gold, slept: d.slept, woke: d.woke, done: d.done, sent: d.sent });
   return {
     open: true,
     players,
     pictures,
+    subs,
+    dreamsKept: dreams,
+    async addSub(sub, now) {
+      const known = subs.get(sub.endpoint);
+      if (!known && subs.size >= MOST_SUBS) return false;
+      subs.set(sub.endpoint, Object.assign(known || { id: nextSub++, made: now }, { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth, seen: now }));
+      return true;
+    },
+    async dropSub(endpoint) {
+      subs.delete(endpoint);
+    },
+    async subsAfter(id, limit) {
+      return Array.from(subs.values()).filter((s) => s.id > id).sort((a, b) => a.id - b.id).slice(0, limit).map(({ id: n, endpoint, p256dh, auth }) => ({ id: n, endpoint, p256dh, auth }));
+    },
+    async lastDream(wheel) {
+      let best = null;
+      for (const d of dreams.values()) if (d.wheel === wheel && (best === null || d.round > best)) best = d.round;
+      return best;
+    },
+    async addDreams(list, now, oldFrom) {
+      for (const d of list) {
+        const key = dreamKey(d.wheel, d.round);
+        if (!dreams.has(key)) dreams.set(key, Object.assign({}, d, { found: now, done: d.woke < oldFrom, sent: 0, sentTo: 0, heldUntil: 0 }));
+      }
+    },
+    async claimDream(wheel, round, now, holdMs) {
+      const d = dreams.get(dreamKey(wheel, round));
+      if (!d || d.done || d.heldUntil >= now) return null;
+      d.heldUntil = now + holdMs;
+      return { sent: d.sent, sentTo: d.sentTo };
+    },
+    async dreamSent(wheel, round, sentTo, sent, done) {
+      const d = dreams.get(dreamKey(wheel, round));
+      if (!d) return;
+      Object.assign(d, { sent: d.sent + sent, sentTo, done, heldUntil: 0 });
+    },
+    async dreams() {
+      return Array.from(dreams.values()).sort((a, b) => b.woke - a.woke).slice(0, DREAMS_LISTED).map(plainDream);
+    },
+    async dream(round, day) {
+      for (const d of dreams.values()) if (d.round === round && dayOf(d.woke) === day) return plainDream(d);
+      return null;
+    },
     async savePicture(id, pic, now) {
       if (!pictures.has(id)) pictures.set(id, { made: now, pic: JSON.parse(JSON.stringify(pic)) });
       while (pictures.size > KEEP_PICTURES) pictures.delete(pictures.keys().next().value);
@@ -219,4 +364,4 @@ function cloudStore(url) {
   });
 }
 
-module.exports = { sqlStore, memoryStore, cloudStore, closedStore, BOARD_SIZE, KEEP_PICTURES };
+module.exports = { sqlStore, memoryStore, cloudStore, closedStore, BOARD_SIZE, KEEP_PICTURES, MOST_SUBS, DREAMS_LISTED, dayOf };

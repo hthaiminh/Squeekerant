@@ -231,6 +231,7 @@
       this.linegame = new WW.Line(this);
       this.landing = new WW.Landing(this);
       this.share = new WW.Share(this);
+      this.alerts = new WW.Alerts(this);
       window.addEventListener('resize', () => this.fit());
       this.fit();
 
@@ -238,6 +239,13 @@
       const saved = (data && data.save) || this.loadLocal();
       if (saved) this.useSave(saved);
       if (!this.s) this.count.once('first_visit');
+      // Opened from a wake up alert. The address goes back to plain, so a reload or a shared link does not count it again.
+      if (/[?&]from=alert(&|$)/.test(location.search)) {
+        this.count.daily('alert_opened');
+        try {
+          history.replaceState(null, '', location.pathname);
+        } catch (e) {}
+      }
       this.watchTabs();
       this.landing.draw();
       this.connectLive();
@@ -269,7 +277,13 @@
     // The service worker only lets the page open with no network. The real site only, never the Artifact preview.
     watchInstall() {
       if (window.claude || !document.querySelector('link[rel="manifest"]')) return;
-      if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        // A wake up alert tapped while the game was already open brings this tab forward.
+        navigator.serviceWorker.addEventListener('message', (e) => {
+          if (e.data && e.data.kind === 'alert-opened') this.count.daily('alert_opened');
+        });
+      }
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         this.installPrompt = e;
@@ -294,10 +308,15 @@
       if (this.landing && this.landing.open) this.landing.draw();
       if (this.panels && this.panels.tab === 'howto' && this.panelVisible()) this.panels.render();
     }
-    async install() {
+    // Alerts turned on or off, or found on at the start: the same places show it.
+    alertsChanged() {
+      this.installChanged();
+    }
+    // why: 'alerts' when the steps are shown because alerts on an iPhone or iPad need the game on the home screen.
+    async install(why) {
       this.sound('tap');
       this.count.once('install_pressed');
-      if (this.installPrompt) {
+      if (this.installPrompt && why !== 'alerts') {
         const prompt = this.installPrompt;
         this.installPrompt = null;
         try {
@@ -308,8 +327,9 @@
       }
       this.showTicket(
         el('h2', null, 'Add it to your home screen'),
+        why === 'alerts' ? el('p', null, 'On an iPhone or iPad, alerts only work for the game on your home screen.') : null,
         el('p', null, 'Tap the Share button of your browser, then Add to Home Screen.'),
-        el('p', { class: 'note', style: 'margin-top:6px' }, 'Squeekerant then opens from its own icon, like an app.'),
+        el('p', { class: 'note', style: 'margin-top:6px' }, why === 'alerts' ? 'Then open Squeekerant from its icon and turn the alerts on there.' : 'Squeekerant then opens from its own icon, like an app.'),
         this.actions(btn('Got it', () => this.closeOverlay(), 'tomato'))
       );
     }
@@ -2003,7 +2023,25 @@
       this.count.once('opened');
       this.noteVisit();
       // An empty room looks broken to someone who has just arrived, and most of the day he is asleep.
-      if (this.live.state === 'quiet') this.toast("He's asleep, so nobody comes in yet. Cook now for when he wakes.", null, WW.iconCanvas('moon'), 7000);
+      if (this.live.state !== 'quiet') return;
+      if (!this.alerts.offered()) return this.toast("He's asleep, so nobody comes in yet. Cook now for when he wakes.", null, WW.iconCanvas('moon'), 7000);
+      this.enqueue(() => this.showAsleep());
+      this.pumpQueue();
+    }
+    // Just opened while he sleeps: what to do until he wakes, and an offer to be told when he does.
+    showAsleep() {
+      this.showTicket(
+        el('h2', null, "He's asleep right now"),
+        el('p', null, 'Nobody comes in until he runs again. Cook now, and your restaurant serves on its own when he does, even with the game closed.'),
+        el('p', { class: 'note', style: 'margin-top:6px' }, 'An alert can tell you when he wakes up, with the dream he had.'),
+        this.actions(
+          btn('Not now', () => this.closeOverlay(), 'plain'),
+          btn('Tell me when he wakes up', () => {
+            this.closeOverlay();
+            this.alerts.turnOn();
+          }, 'tomato')
+        )
+      );
     }
 
     showChefEditor() {
@@ -2062,6 +2100,8 @@
       const hrs = (d.sleptRounds / 6).toFixed(1);
       if (!again) this.sound('dream');
       if (!this.practice) this.count.once('first_dream');
+      // Seen soon after he woke, the server is told to look too, so the alerts go out sooner.
+      if (!again && !this.practice && this.feed.mode === 'live' && this.s.dreamDish) this.alerts.ping(this.s.dreamDish.round, this.feed.roundEnd(this.s.dreamDish.round - 1));
       // Sharing opens over the card, and closing the picture brings the card back with its Cook button.
       const share = () => {
         if (this.share.busy) return;
@@ -2077,6 +2117,7 @@
         el('p', null, def.gold ? 'A golden dream, which only comes after 15 hours of sleep or more. It sells for twice as much.' : 'Every player sees this same dream, picked by the hash of the round he woke on.'),
         el('p', { class: 'note', style: 'margin-top:6px' }, `Cook it ${def.st === 'pot' ? 'in the pot' : 'on the ' + def.st} for ${WW.CFG.DREAM_DISH_COST} Winks until his next long sleep. Legendary guests only come for dream dishes.`),
         s.critic.hints.length ? el('p', { class: 'note', style: 'margin-top:6px' }, `Also in the dream: ${s.critic.hints[s.critic.hints.length - 1]}`) : null,
+        this.practice ? null : el('p', { class: 'note', style: 'margin-top:6px' }, WW.dreamsLink()),
         this.actions(this.practice ? null : btn('Share', share, 'plain'), btn('Good morning', () => this.closeOverlay(), 'plain'), btn('Cook it', () => { this.closeOverlay(); this.panels.cookDreamNow(); }, 'lilac'))
       );
     }

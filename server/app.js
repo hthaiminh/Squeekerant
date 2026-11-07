@@ -2,6 +2,8 @@
 // Signing in only ever asks the wallet to sign a message. There is no fee and no transaction.
 const crypto = require('crypto');
 const { cleanScore, cleanSteps, COUNT_LABELS } = require('./rules');
+const push = require('./push');
+const { createWake } = require('./wake');
 
 const TICKET_MS = 5 * 60000;
 const SESSION_MS = 60 * 86400000;
@@ -20,7 +22,14 @@ const NO_PICTURE_CACHE = 'public, max-age=60, s-maxage=300';
 const PICTURES_PER_HOUR = 20;
 const PICTURES_PER_DAY = 2000;
 const COUNTS_PER_HOUR = 60;
+const ALERT_CHANGES_PER_HOUR = 30;
+const CHECKS_PER_HOUR = 60;
 const HOUR_MS = 3600000;
+// /dreams, a dream's own page, and its picture.
+const DREAM_PATH = /^\/dreams(?:\/(\d{4}-\d{2}-\d{2}-\d{1,9})(\.png)?)?\/?$/;
+const DREAMS_CACHE = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600';
+const DREAM_PAGE_CACHE = 'public, max-age=300, s-maxage=86400';
+const KEY_CACHE = 'public, max-age=300, s-maxage=3600';
 
 class Refusal extends Error {
   constructor(status, message) {
@@ -45,7 +54,10 @@ function countsPage(rows, now) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Squeekerant counts</title><style>body{font:15px/1.3 system-ui,sans-serif;margin:16px;color:#3a2340;background:#fff8e8}h1{font-size:20px;margin:0 0 4px}p{margin:0 0 12px}table{border-collapse:collapse}th,td{padding:3px 8px;text-align:right;border-bottom:1px solid #f0d6a3;white-space:nowrap}.l{text-align:left}div{overflow-x:auto}</style></head><body><h1>Squeekerant counts</h1><p>How many browsers reached each step, per day (UTC), for the last ${COUNT_DAYS} days. Numbers only, nothing about who. Anyone could push these up, so never pay anything on them.</p><div><table><tr><th class="l">Step</th>${head}<th>Total</th></tr>${lines}</table></div></body></html>`;
 }
 
-function createApp({ store, secret, local = false, clock = Date.now }) {
+// wheel and send are only given by tests. The alerts' keys come from the same secret as the sessions.
+function createApp({ store, secret, local = false, clock = Date.now, wheel = require('./wheel'), send = null }) {
+  const pushKeys = push.keysFrom(Buffer.from(secret).toString('hex'));
+  const wake = createWake({ store, wheel, clock, send: send || ((sub, message) => push.send(sub, message, pushKeys, { now: clock() })) });
   const sign = (kind, data) => {
     const body = b64(JSON.stringify(Object.assign({ k: kind }, data)));
     return body + '.' + crypto.createHmac('sha256', secret).update(body).digest('base64url');
@@ -97,8 +109,25 @@ function createApp({ store, secret, local = false, clock = Date.now }) {
   };
   const tooMany = limiter(PICTURES_PER_HOUR);
   const tooManyCounts = limiter(COUNTS_PER_HOUR);
+  const tooManyAlertChanges = limiter(ALERT_CHANGES_PER_HOUR);
+  const tooManyChecks = limiter(CHECKS_PER_HOUR);
   const pictures = () => require('./picture');
+  const dreams = () => require('./dreams');
   const canKeepPictures = () => store.open && typeof store.savePicture === 'function';
+  const canKeepAlerts = () => store.open && typeof store.addSub === 'function';
+
+  // GET /dreams lists every dream, GET /dreams/<day>-<round> is one dream's page, and that with .png its picture.
+  async function dreamRoute(id, png, headers) {
+    const origin = originOf(headers);
+    if (!id) return { status: 200, html: await dreams().listPage(await wake.list(), origin), cache: DREAMS_CACHE };
+    const d = await wake.one(id);
+    if (!d) {
+      if (png) return { status: 404, json: { error: 'There is no such dream.' }, cache: NO_PICTURE_CACHE };
+      return { status: 404, html: '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>No such dream</title><meta name="robots" content="noindex"></head><body style="font:20px/1.4 system-ui,sans-serif;margin:24px;background:#2a1f48;color:#fff8e8"><p>There is no dream at this address. <a style="color:#ffc857" href="/dreams">Every dream</a> &middot; <a style="color:#ffc857" href="/">Play Squeekerant</a></p></body></html>', cache: NO_PICTURE_CACHE };
+    }
+    if (png) return { status: 200, body: await dreams().picture(d), type: 'image/png', cache: PICTURE_CACHE };
+    return { status: 200, html: dreams().dreamPage(d, origin), cache: DREAM_PAGE_CACHE };
+  }
 
   // GET /p/<id> is the page a shared link opens, GET /p/<id>.png the picture on it.
   async function pictureRoute(id, png, headers) {
@@ -208,12 +237,39 @@ function createApp({ store, secret, local = false, clock = Date.now }) {
       }
       return { json: { ok: true, id, url: `${originOf(headers)}/p/${id}` } };
     },
+    // Wake up alerts. A browser gets the site's public key, then hands over where its push service takes messages for it.
+    'GET /api/push/key': async () => ({ json: { key: pushKeys.publicText }, cache: KEY_CACHE }),
+    'POST /api/push/subscribe': async ({ body, headers }) => {
+      hostOf(headers);
+      if (!canKeepAlerts()) return { json: { ok: false } };
+      if (tooManyAlertChanges(headers)) throw new Refusal(429, 'That is a lot of changes for one hour.');
+      const sub = push.cleanSubscription(body);
+      if (!sub) throw new Refusal(400, 'That is not a push subscription this site can use.');
+      return { json: { ok: await store.addSub(sub, clock()) } };
+    },
+    'POST /api/push/unsubscribe': async ({ body, headers }) => {
+      hostOf(headers);
+      if (!canKeepAlerts()) return { json: { ok: false } };
+      if (tooManyAlertChanges(headers)) throw new Refusal(429, 'That is a lot of changes for one hour.');
+      const endpoint = push.cleanEndpoint(body && body.endpoint);
+      if (!endpoint) throw new Refusal(400, 'That is not a push subscription this site can use.');
+      await store.dropSub(endpoint);
+      return { json: { ok: true } };
+    },
+    // A look at the wheel for a new dream. The schedule in vercel.json asks every 15 minutes, and so may anyone:
+    // the answer is the same whoever asks, and an alert only ever goes out once.
+    'POST /api/wake/check': async ({ headers }) => {
+      if (tooManyChecks(headers)) throw new Refusal(429, 'That is a lot of looks for one hour.');
+      return { json: await wake.check() };
+    },
   };
 
   // Takes a plain request and gives back a status, a body and how long it may be cached.
   return async function handle({ method, path, headers, body }) {
-    const shared = (method === 'GET' || method === 'HEAD') && PICTURE_PATH.exec(path);
-    const route = shared ? () => pictureRoute(shared[1], !!shared[2], headers || {}) : routes[`${method} ${path}`];
+    const looking = method === 'GET' || method === 'HEAD';
+    const shared = looking && PICTURE_PATH.exec(path);
+    const dream = looking && !shared && DREAM_PATH.exec(path);
+    const route = shared ? () => pictureRoute(shared[1], !!shared[2], headers || {}) : dream ? () => dreamRoute(dream[1], !!dream[2], headers || {}) : routes[`${method} ${path}`];
     if (!route) return { status: 404, json: { error: 'Not found.' } };
     try {
       const out = await route({ headers: headers || {}, body });
