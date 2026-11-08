@@ -4,7 +4,7 @@
   const { el, img, btn, WORLD } = WW;
   const E = () => WW.Engine;
   const OUT = WW.OUTSIDE;
-  const FAST = 60;
+  const FAST = 180;
   const SLOW = 10;
   const ROUND_A_SECOND = 600;
 
@@ -83,12 +83,6 @@
     goTo(view) {
       const g = this.game;
       if (g.scene.view !== view || g.visit) g.walkTo(view);
-    }
-    goVisit() {
-      const g = this.game;
-      if (g.visit) return;
-      const lot = g.streetLots()[0];
-      g.visitNeighbour(lot.id);
     }
     // How a cooking step points: at the station, then at the Cook button once the dish list is open.
     cookStep(type, def, extra) {
@@ -173,54 +167,10 @@
           done: () => this.s.cash > this.cashAt,
           skip: true,
         },
-        this.cookStep('wok', wok, {
-          id: 'wok',
-          title: 'The wok runs on his legs',
-          body: 'The wok only cooks on wheel passes. It fires while he runs and waits while he sleeps.',
-        }),
-        {
-          id: 'wokWait',
-          title: 'Pass by pass',
-          body: `A batch of ${wok.n} takes ${wok.need} passes in the real game, about ${Math.round(wok.need / 70)} minutes of running. This one is shorter. It is plated when the round settles.`,
-          view: 'in',
-          enter: () => {
-            this.closeSheet();
-            const job = this.s.stations[this.station('wok')].job;
-            if (job) job.need = Math.min(job.need, 30);
-            this.wokEnded = false;
-          },
-          ring: () => this.stationRect('wok'),
-          every: () => {
-            const st = this.s.stations[this.station('wok')];
-            if (st.job && !this.wokEnded && E().stationProgress(this.s, st, f, f.now()) >= 1) {
-              this.wokEnded = true;
-              f.finishRound();
-            }
-          },
-          done: () => !this.s.stations[this.station('wok')].job,
-          skip: true,
-        },
-        {
-          id: 'line',
-          title: 'On the Line',
-          body: 'While he runs, this button opens a quick game. The carousel moves one step on every real wheel pass, and serving dishes off it earns extra tips. Try it if you like.',
-          line: true,
-          enter: () => {
-            f.running || f.run();
-            if (!this.hasDish()) this.s.stock.carrot_coins = 20;
-          },
-          ring: () => ({ el: first('#cta .btn.tomato') }),
-          next: true,
-        },
-        this.cookStep('pot', pot, {
-          id: 'pot',
-          title: 'The pot is the opposite',
-          body: 'The pot simmers only while he is not running. Load it now and it waits for him to rest.',
-        }),
         {
           id: 'sleep',
           title: 'Bedtime',
-          body: 'When he stops, the restaurant goes quiet and no guests come in. That is normal. He is off the wheel most of the day.',
+          body: 'When he stops, the restaurant goes quiet and no guests come in. That is normal. He is off the wheel most of the day. The wok, your second station, only cooks on his wheel passes. The pot, the third, only simmers while he sleeps.',
           view: 'in',
           enter: () => this.closeSheet(),
           action: ['Let him sleep', () => { f.sleep(); f.setRate(ROUND_A_SECOND); }, 'lilac'],
@@ -229,7 +179,7 @@
         {
           id: 'night',
           title: 'While he sleeps',
-          body: 'Each quiet round earns 1 Wink, your staff get their energy back and the pot simmers. Watch your Winks go up.',
+          body: 'Each quiet round earns 1 Wink and your staff get their energy back. Watch your Winks go up.',
           ring: () => ({ el: first('#statWink') }),
           enter: () => {
             if (f.running) {
@@ -238,7 +188,7 @@
             }
             this.nightAt = performance.now();
           },
-          done: () => !this.s.stations[this.station('pot')].job && performance.now() - this.nightAt > 5000,
+          done: () => performance.now() - this.nightAt > 5000,
           skip: true,
         },
         {
@@ -267,158 +217,25 @@
           done: () => !!this.s.dreamDish && !g.queue.length && !document.getElementById('overlay').classList.contains('show'),
         },
         {
-          id: 'door',
-          title: 'Step outside',
-          body: 'Your door leads out to the market, the decor shop and the neighbours.',
+          id: 'market',
+          title: 'The market',
+          body: 'Your door leads outside. Ingredients come from the market, and every restaurant has its own stall. The goods change each day, and better things are scarce.',
+          view: 'out',
           enter: () => {
             this.closeSheet();
             f.setRate(SLOW);
             f.running || f.run();
+            this.goTo('out');
           },
-          todo: () => 'Click the Go outside button.',
-          ring: () => (this.scene.view === 'in' ? { el: first('#btnDoor') } : null),
-          done: () => this.scene.view === 'out' && !this.scene.fading,
-          skip: true,
-        },
-        {
-          id: 'tree',
-          title: 'Shake the tree',
-          body: 'You get three shakes a day. Cash falls out, and now and then something odd.',
-          view: 'out',
-          enter: () => this.goTo('out'),
-          todo: () => 'Click the tree.',
-          ring: () => ({ view: 'out', x: OUT.TREE.x, y: OUT.TREE.y, w: OUT.TREE.w, h: OUT.TREE.h }),
-          done: () => this.s.flags.tree,
-          skip: true,
-        },
-        {
-          id: 'market',
-          title: 'The market',
-          body: 'Ingredients come from here. Every restaurant has its own stall, the goods change each day, and better things are scarce.',
-          view: 'out',
-          enter: () => this.goTo('out'),
           todo: () => (g.panels.tab === 'market' && g.panelVisible() ? 'Click +1 to buy something.' : 'Click the market.'),
           ring: () => (g.panels.tab === 'market' && g.panelVisible() ? { el: panelButton() } : { view: 'out', x: OUT.MARKET.x, y: OUT.MARKET.y, w: OUT.MARKET.w, h: OUT.MARKET.h }),
           done: () => this.s.flags.bought,
           skip: true,
         },
         {
-          id: 'board',
-          title: 'The notice board',
-          body: 'Three parties book in each day and pay above the menu price. There is also a daily question, with free ingredients for a right answer.',
-          view: 'out',
-          enter: () => {
-            this.closeSheet();
-            this.goTo('out');
-          },
-          ring: () => ({ view: 'out', x: OUT.BOARD.x, y: OUT.BOARD.y, w: OUT.BOARD.w, h: OUT.BOARD.h }),
-          next: true,
-        },
-        {
-          id: 'shop',
-          title: 'The decor shop',
-          body: 'Tables and chairs give you more seats. Nice things raise your rating, and that raises tips. Yard pieces and a new look for your building add charm, and charm draws more guests.',
-          view: 'out',
-          enter: () => {
-            this.closeSheet();
-            this.goTo('out');
-          },
-          ring: () => ({ view: 'out', x: OUT.SHOP.x, y: OUT.SHOP.y, w: OUT.SHOP.w, h: OUT.SHOP.h }),
-          next: true,
-        },
-        {
-          id: 'ranks',
-          title: 'The leaderboard',
-          body: 'Restaurants are ranked by level. Only restaurants with a connected wallet are listed, and connecting costs nothing.',
-          view: 'out',
-          enter: () => {
-            this.closeSheet();
-            this.goTo('out');
-          },
-          ring: () => ({ view: 'out', x: OUT.RANKS.x, y: OUT.RANKS.y, w: OUT.RANKS.w, h: OUT.RANKS.h }),
-          next: true,
-        },
-        {
-          id: 'street',
-          title: 'Your neighbours',
-          body: `The signpost leads to Skirting Street, where five neighbours live. You can walk to another street ${WW.STREET.MOVES} times a day.`,
-          view: 'out',
-          enter: () => {
-            this.closeSheet();
-            this.goTo('out');
-          },
-          todo: () => 'Click the signpost.',
-          ring: () => ({ view: 'out', x: OUT.GATE.x, y: OUT.GATE.y, w: OUT.GATE.w, h: OUT.GATE.h }),
-          done: () => this.scene.view === 'street' && !this.scene.fading,
-          skip: true,
-        },
-        {
-          id: 'house',
-          title: 'Knock on a door',
-          body: 'Any of these houses can be visited, and your first visit earns a welcome gift.',
-          todo: () => (this.scene.view === 'street' ? 'Click a house.' : this.scene.view === 'out' ? 'Click the signpost.' : `Click the ${g.doorPlace().text} button.`),
-          ring: () => {
-            if (this.scene.view === 'in') return { el: first('#btnDoor') };
-            if (this.scene.view === 'out') return { view: 'out', x: OUT.GATE.x, y: OUT.GATE.y, w: OUT.GATE.w, h: OUT.GATE.h };
-            const lot = g.streetLots()[0];
-            return Object.assign({ view: 'street' }, this.scene.lotHouse(lot).rect);
-          },
-          done: () => !!g.visit && !this.scene.fading,
-          skip: true,
-        },
-        {
-          id: 'clean',
-          title: 'Help out',
-          body: 'Cleaning a neighbour\'s floor pays cash, up to six spots a day.',
-          enter: () => {
-            this.goVisit();
-            this.closeSheet();
-          },
-          todo: () => 'Click a dirty spot on the floor.',
-          ring: () => {
-            // The spot furthest from the coach.
-            const d = g.visit && this.scene.dirt.slice().sort((a, b) => a.y - b.y)[0];
-            return d ? { view: 'in', x: d.x - 7, y: d.y - 6, w: 14, h: 11 } : null;
-          },
-          done: () => this.s.flags.cleanedForFriend,
-          skip: true,
-        },
-        {
-          id: 'trade',
-          title: 'Trade and hire',
-          body: 'Here you can also taste a dish, trade ingredients and hire their hamster. A trade needs the same level or better, shown as L1 to L4. What your stall lacks, a neighbour may have.',
-          enter: () => {
-            this.goVisit();
-            g.panels.open('street', { view: 'here' });
-          },
-          next: true,
-          leave: () => {
-            this.closeSheet();
-            if (g.visit) g.walkTo('in');
-          },
-        },
-        {
-          id: 'arrange',
-          title: 'Arrange your room',
-          body: 'This button moves your furniture and places things from your bag, inside and outside. Your bag is in the Kitchen.',
-          enter: () => {
-            this.closeSheet();
-            this.goTo('in');
-          },
-          ring: () => ({ el: first('#btnArrange') }),
-          next: true,
-        },
-        {
-          id: 'recipes',
-          title: 'New recipes',
-          body: `Neighbours share a recipe every second level. The rest you find in the Test Kitchen: pick up to three ingredients and taste them, for ${CFG.EXPERIMENT_COST} Winks a try.`,
-          ring: () => ({ el: first('.tab[data-tab="recipes"]') }),
-          next: true,
-        },
-        {
           id: 'howto',
           title: 'If you forget',
-          body: 'How To Play has all of this in short, and it can bring you back to this practice kitchen at any time.',
+          body: 'Out here are also the decor shop, the notice board, the leaderboard and your neighbours. How To Play has all of it in short, and it can bring you back to this practice kitchen at any time.',
           enter: () => this.closeSheet(),
           ring: () => ({ el: first('.tab[data-tab="howto"]') }),
           next: true,

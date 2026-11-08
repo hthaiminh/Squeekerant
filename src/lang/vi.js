@@ -370,6 +370,19 @@
     "Open in another tab": "Đang mở ở tab khác",
     "Squeekerant is playing in another tab now. This one has stopped, so the two can never save over each other.": "Squeekerant đang chơi ở một tab khác. Tab này đã dừng để hai tab không bao giờ lưu đè lên nhau.",
     "Play here": "Chơi ở đây",
+    // The shorter practice kitchen, the wallet's restaurant and the first guest.
+    "When he stops, the restaurant goes quiet and no guests come in. That is normal. He is off the wheel most of the day. The wok, your second station, only cooks on his wheel passes. The pot, the third, only simmers while he sleeps.": "Khi cậu ấy dừng, nhà hàng yên tĩnh và không có khách vào. Điều đó là bình thường. Phần lớn thời gian cậu ấy không chạy. Chảo, bếp thứ hai của bạn, chỉ nấu khi bánh xe quay. Nồi, bếp thứ ba, chỉ ninh khi cậu ấy ngủ.",
+    "Each quiet round earns 1 Wink and your staff get their energy back. Watch your Winks go up.": "Mỗi round yên tĩnh được 1 Wink và nhân viên hồi sức. Hãy xem số Wink tăng lên.",
+    "Your door leads outside. Ingredients come from the market, and every restaurant has its own stall. The goods change each day, and better things are scarce.": "Cửa dẫn ra ngoài. Nguyên liệu mua ở chợ, và mỗi nhà hàng có sạp riêng. Hàng đổi mỗi ngày, đồ càng tốt càng hiếm.",
+    "Out here are also the decor shop, the notice board, the leaderboard and your neighbours. How To Play has all of it in short, and it can bring you back to this practice kitchen at any time.": "Ngoài này còn có cửa hàng đồ trang trí, bảng thông báo, bảng xếp hạng và hàng xóm. Mục Cách Chơi có tóm tắt tất cả, và đưa bạn quay lại bếp tập bất cứ lúc nào.",
+    "Two restaurants": "Hai nhà hàng",
+    "The one you do not pick is replaced. Make a save code first if you want to keep it.": "Quán bạn không chọn sẽ bị thay. Hãy tạo mã lưu trước nếu muốn giữ nó.",
+    "From my wallet": "Từ ví của tôi",
+    "From this device": "Từ máy này",
+    "Decide later": "Quyết định sau",
+    "This deletes your restaurant, guest book and recipes on this device and with your wallet.": "Việc này xóa nhà hàng, sổ khách và công thức của bạn trên máy này và cả bản gắn với ví.",
+    "Your first guest!": "Vị khách đầu tiên!",
+    "He is running, and your restaurant is serving. When he goes to sleep, nobody comes in until he runs again.": "Cậu ấy đang chạy, và quán của bạn đang phục vụ. Khi cậu ấy đi ngủ, không ai vào cho tới khi cậu ấy chạy lại.",
     // The welcome page, the wake up alerts and the dreams page.
     "A free pixel restaurant game, run live by a real hamster on a real wheel.": "Game nhà hàng pixel miễn phí, chạy trực tiếp theo một chú hamster thật trên bánh xe thật.",
     "Guests come when he runs, even with the game closed.": "Khách tới khi cậu ấy chạy, kể cả lúc bạn tắt game.",
@@ -883,6 +896,8 @@
     [/^That dish is made on the (.+)\.$/, 'Món này phải làm trên $1.'], [/^A dream dish takes (\d+) Winks\.$/, 'Món Trong Mơ tốn $1 Winks.'], [/^You need more (.+)\.$/, 'Bạn cần thêm $1.'], [/^A try takes (\d+) Winks\.$/, 'Mỗi lần thử tốn $1 Winks.'], [/^You are out of (.+)\.$/, 'Bạn hết $1 rồi.'], [/^A hint takes (\d+) Winks\.$/, 'Mỗi gợi ý tốn $1 Winks.'], [/^You need (\d+) (.+) portions on the counter\.$/, 'Bạn cần $1 phần vị $2 trên quầy.'], [/^You need (\d+) (.+)\.$/, 'Bạn cần $1 $2.'], [/^(.+) already works here\.$/, '$1 đã làm ở đây rồi.'], [/^Level (\d+) allows (\d+) (sous chefs|waiters|cleaners)\.$/, 'Cấp $1 chỉ cho phép $2 $3.'], [/^Hiring costs ([\d,]+) cash\.$/, 'Thuê tốn $1 cash.'], [/^Reach level (\d+) first\.$/, 'Cần đạt cấp $1 trước.'], [/^A plate here costs ([\d,]+) cash\.$/, 'Một đĩa ở đây giá $1 cash.'], [/^(.+) is L(\d), (.+) is L(\d)\. Give L(\d) or better\.$/, '$1 là L$2, $3 là L$4. Hãy đưa L$5 trở lên.'],
     // Dream names and signs on the canvas
     [/^Golden (.+)$/, '$1 Vàng'], [/^TIPS (\d+)$/, 'TIP $1'], [/^(\d+) TURNS LEFT$/, 'CÒN $1 VÒNG'],
+    [/^(.+) came with your wallet\.$/, '$1 đã đi theo ví của bạn.'],
+    [/^Your wallet has (.+), level (\d+)\. This device has (.+), level (\d+)\. Only one can go with your wallet\.$/, 'Ví của bạn có $1, cấp $2. Máy này có $3, cấp $4. Chỉ một quán đi theo ví được.'],
     [/^(.+), level (\d+), is replaced on this device by (.+), level (\d+)\.$/, '$1, cấp $2, sẽ được thay bằng $3, cấp $4 trên máy này.'], [/^(.+) is open on this device\.$/, '$1 đã mở trên máy này.'],
     [/^\+([\d,]+) Winks$/, '+$1 Winks'], [/^\+([\d,]+) cash$/, '+$1 cash'], [/^(\d+) cm$/, '$1 cm'],
     // Real numbers on details and buttons

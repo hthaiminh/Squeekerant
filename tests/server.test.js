@@ -983,3 +983,70 @@ test('with no answer from the official API, the server finds the last settled ro
   const config = require('fs').readFileSync(path.join(src, 'core/feed.js'), 'utf8');
   assert.ok(config.includes('WW.KNOWN_WHEELS = KNOWN_WHEELS') && config.includes('WW.NODES = NODES'), 'the server reads the same wheels through the same nodes');
 });
+
+// A restaurant goes with its wallet
+
+test('a restaurant is kept with its wallet, readable and changeable only by that wallet, and a device only replaces the copy it last saw', async () => {
+  const { call, signIn, store, clock } = setup();
+  const alice = (await signIn(ALICE)).json.token;
+  const bob = (await signIn(BOB)).json.token;
+  const as = (token) => ({ authorization: 'Bearer ' + token });
+  const code = (n) => `SQKZ1.${'Ab_-9'.repeat(n)}.1x`;
+  const at = (d) => AT - 100000 + d;
+  assert.equal((await call('GET', '/api/save')).status, 401, 'nobody signed in');
+  assert.equal((await call('GET', '/api/save', null, as('made.up'))).status, 401);
+  assert.deepEqual((await call('GET', '/api/save', null, as(alice))).json, { code: null }, 'nothing kept yet');
+
+  // The first device keeps one, having seen none.
+  const first = await call('POST', '/api/save', { code: code(10), at: at(0), base: 0 }, as(alice));
+  assert.deepEqual(first.json, { ok: true, kept: true, at: at(0) });
+  assert.deepEqual((await call('GET', '/api/save', null, as(alice))).json, { code: code(10), at: at(0) });
+  assert.deepEqual((await call('GET', '/api/save', null, as(bob))).json, { code: null }, 'another wallet sees nothing of it');
+
+  // It goes on from the copy it saw. A second device that saw the same copy goes on from it too, and the first is then behind.
+  assert.equal((await call('POST', '/api/save', { code: code(11), at: at(500), base: at(0) }, as(alice))).json.kept, true);
+  const behind = await call('POST', '/api/save', { code: code(12), at: at(900), base: at(0) }, as(alice));
+  assert.deepEqual(behind.json, { ok: true, kept: false, at: at(500) }, 'based on a copy that is no longer the latest: refused, and told what is kept');
+  assert.equal((await call('GET', '/api/save', null, as(alice))).json.code, code(11));
+  assert.equal((await call('POST', '/api/save', { code: code(13), at: at(1200), base: at(500) }, as(alice))).json.kept, true, 'based on the latest: taken');
+  // A device that chose its own restaurant over the kept one says so.
+  assert.deepEqual((await call('POST', '/api/save', { code: code(14), at: at(1500), base: 0, force: true }, as(alice))).json, { ok: true, kept: true, at: at(1500) });
+  assert.equal((await call('POST', '/api/save', { code: code(15), at: at(1800) }, as(alice))).json.kept, false, 'with no base it is a device that saw nothing, so it cannot replace anything');
+
+  // Only what the game makes, and no time from the future.
+  for (const bad of [{ code: 'hello', at: at(0) }, { code: code(1) + '<b>', at: at(0) }, { code: 'SQKZ1..1x', at: at(0) }, { code: code(1), at: 'now' }, { code: code(1), at: 5 }, { code: code(1), at: at(0), base: -1 }, { code: code(1), at: at(0), base: 'x' }, { code: 12345, at: at(0) }, { at: at(0) }, null]) {
+    assert.equal((await call('POST', '/api/save', bad, as(alice))).status, 400, JSON.stringify(bad));
+  }
+  assert.equal((await call('POST', '/api/save', { code: 'SQKZ1.' + 'a'.repeat(rules.MOST_SAVE_CODE) + '.1x', at: at(0) }, as(alice))).status, 400, 'too big');
+  const future = await call('POST', '/api/save', { code: code(2), at: AT + 99 * 86400000, base: at(1500) }, as(alice));
+  assert.equal(future.json.at, AT, 'a time in the future is taken as now');
+  assert.equal((await call('GET', '/api/save', null, as(bob))).json.code, null);
+
+  // Starting over takes it away, and the next first device starts fresh.
+  assert.deepEqual((await call('POST', '/api/save', { code: null }, as(alice))).json, { ok: true, kept: true });
+  assert.deepEqual((await call('GET', '/api/save', null, as(alice))).json, { code: null });
+  assert.equal(store.saves.size, 0);
+  assert.equal((await call('POST', '/api/save', { code: code(3), at: at(2000), base: 0 }, as(alice))).json.kept, true);
+
+  // Limits, and the same wallet whichever way its address is spelled.
+  let refused = null;
+  for (let i = 0; i < 60 && refused === null; i++) if ((await call('POST', '/api/save', { code: code(3), at: at(3000 + i), base: 0, force: true }, Object.assign(as(alice), { 'x-real-ip': '198.51.100.7' }))).status === 429) refused = i;
+  assert.ok(refused !== null && refused >= 35, `one address can only save so often an hour (refused after ${refused})`);
+  clock.now += 3600000;
+  assert.equal((await call('POST', '/api/save', { code: code(3), at: AT + 3600000, base: 0, force: true }, Object.assign(as(alice), { 'x-real-ip': '198.51.100.7' }))).status, 200, 'and again the next hour');
+  assert.equal([...store.saves.keys()].every((k) => k === k.toLowerCase()), true, 'kept under the lower case address');
+  const closed = createApp({ store: closedStore, secret: Buffer.from('s') });
+  assert.equal((await closed({ method: 'GET', path: '/api/save', headers: Object.assign({}, HOST, as(alice)) })).status, 503, 'with no database, closed');
+});
+
+test('a restaurant kept with a wallet is one the game itself made and can open again', async () => {
+  const feed = new WW.RecordingFeed(WW.RECORDING);
+  const s = E.newGame(feed.now(), feed, { shop: "Mina's Den", name: 'Mina' });
+  s.savedAt = Date.now();
+  const made = await WW.SaveCode.make(s);
+  assert.deepEqual(rules.cleanSaveCode({ code: made, at: s.savedAt }, Date.now() + 1000), { code: made, at: s.savedAt, base: 0, force: false }, 'the server takes what the game makes');
+  assert.ok(made.length < rules.MOST_SAVE_CODE / 3, 'and a grown restaurant stays far under the limit');
+  const back = await WW.SaveCode.read(made);
+  assert.equal(back.shop, "Mina's Den");
+  assert.equal(back.created, s.created, 'the game tells two restaurants apart by when they were made');
+});

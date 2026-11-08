@@ -70,6 +70,13 @@ const TABLES = [
     PRIMARY KEY (wheel, round)
   )`,
   'CREATE INDEX IF NOT EXISTS dreams_woke ON dreams (woke DESC)',
+  // One restaurant per wallet, kept as the save code the game makes, so a restaurant follows its wallet to any device.
+  `CREATE TABLE IF NOT EXISTS saves (
+    wallet text PRIMARY KEY,
+    code text NOT NULL,
+    saved_at timestamptz NOT NULL,
+    made timestamptz NOT NULL
+  )`,
 ];
 // Only the newest pictures are kept. An older link still opens, with the game's own picture.
 const KEEP_PICTURES = 20000;
@@ -229,6 +236,28 @@ function sqlStore(query) {
       const rows = await query(`SELECT ${DREAM_COLUMNS} FROM dreams WHERE round = $1 AND to_char(woke AT TIME ZONE 'UTC', 'YYYY-MM-DD') = $2 LIMIT 1`, [round, day]);
       return rows.length ? dreamRow(rows[0]) : null;
     },
+    // A device only replaces the copy it last saw: one that is behind changes nothing, and the answer says what is kept now.
+    async getSave(wallet) {
+      await prepare();
+      const rows = await query('SELECT code, saved_at FROM saves WHERE wallet = $1', [wallet]);
+      return rows.length ? { code: rows[0].code, at: new Date(rows[0].saved_at).getTime() } : null;
+    },
+    async putSave(wallet, code, at, now, base, force) {
+      await prepare();
+      const rows = await query(
+        `INSERT INTO saves (wallet, code, saved_at, made) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (wallet) DO UPDATE SET code = excluded.code, saved_at = excluded.saved_at WHERE $6::boolean OR saves.saved_at <= $5::timestamptz
+         RETURNING saved_at`,
+        [wallet, code, new Date(at).toISOString(), new Date(now).toISOString(), new Date(base).toISOString(), !!force]
+      );
+      if (rows.length) return { kept: true, at: new Date(rows[0].saved_at).getTime() };
+      const kept = await query('SELECT saved_at FROM saves WHERE wallet = $1', [wallet]);
+      return { kept: false, at: kept.length ? new Date(kept[0].saved_at).getTime() : 0 };
+    },
+    async dropSave(wallet) {
+      await prepare();
+      await query('DELETE FROM saves WHERE wallet = $1', [wallet]);
+    },
     async board() {
       await prepare();
       const rows = await query(
@@ -251,6 +280,7 @@ function memoryStore() {
   const pictures = new Map();
   const subs = new Map();
   const dreams = new Map();
+  const saves = new Map();
   let nextSub = 1;
   const sorted = () => Array.from(players.values()).filter((p) => !p.hidden).sort((a, b) => b.total - a.total || a.reachedAt - b.reachedAt);
   const dreamKey = (wheel, round) => wheel + ' ' + round;
@@ -261,6 +291,20 @@ function memoryStore() {
     pictures,
     subs,
     dreamsKept: dreams,
+    saves,
+    async getSave(wallet) {
+      const v = saves.get(wallet);
+      return v ? { code: v.code, at: v.at } : null;
+    },
+    async putSave(wallet, code, at, now, base, force) {
+      const v = saves.get(wallet);
+      if (v && !force && v.at > base) return { kept: false, at: v.at };
+      saves.set(wallet, { code, at });
+      return { kept: true, at };
+    },
+    async dropSave(wallet) {
+      saves.delete(wallet);
+    },
     async addSub(sub, now) {
       const known = subs.get(sub.endpoint);
       if (!known && subs.size >= MOST_SUBS) return false;

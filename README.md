@@ -54,7 +54,7 @@ Trees and floors always pay cash, with a small chance of an ingredient, a bit of
 
 The landing page comes first on every visit: the name, drawn by hand in `src/art/logo.js`, one line saying what the game is, the game's own woods at the real hour, with your restaurant in them when you have one, and the way in. Play comes first. Connecting a wallet comes second, since it is only for the leaderboard. While he sleeps, which is most of the day, it says that guests come when he runs, even with the game closed, and when he last ran in the reader's own time, and it offers a wake up alert. The restaurant stands still behind it. Disconnecting a wallet comes back here. A restaurant opened while he sleeps gets a card saying the same, with the same offer.
 
-Anyone with no restaurant is offered the practice kitchen before naming one, and can skip it. It is a throwaway save on the real rules and the real screens, run by `PracticeFeed`, a pretend hamster the lesson tells when to run and sleep and how fast time goes. A coach (`src/ui/practice.js`) walks through 26 steps and a ring marks what to press. Nothing there is saved or sent to the board, and a real restaurant is put aside and comes back as it was. How To Play, the sixth tab, has everything in short and can open the practice kitchen again.
+Anyone with no restaurant is offered the practice kitchen before naming one, and can skip it. It is a throwaway save on the real rules and the real screens, run by `PracticeFeed`, a pretend hamster the lesson tells when to run and sleep and how fast time goes. A coach (`src/ui/practice.js`) walks through 11 steps and a ring marks what to press: the wheel, the stove, his waking, guests and the till, his sleep and the dream, and the market. The decor shop, the neighbours, the notice board and the rest are left to How To Play. It was 26 steps until the counts showed that nobody finished them, and the stove batch now takes 15 seconds on screen. Nothing there is saved or sent to the board, and a real restaurant is put aside and comes back as it was. How To Play, the sixth tab, has everything in short and can open the practice kitchen again.
 
 ## Showing it off
 
@@ -74,7 +74,7 @@ The server finds the dreams with the game's own code: `server/wheel.js` loads th
 
 ## Wake up alerts
 
-A player can ask to be told when he wakes up from a long sleep: from the welcome page while he sleeps, from the card after opening a restaurant while he sleeps, or in How To Play, where they can also be turned off. The browser asks first. The alert says how long he slept and what he dreamed of, with the dream's picture, and opens the game. On an iPhone or iPad, alerts only work for the game on the home screen, so the button shows how to put it there first.
+A player can ask to be told when he wakes up from a long sleep: from the welcome page while he sleeps, from the card after opening a restaurant while he sleeps, from a card after the first real guest (once ever, so it also reaches people who arrive while he runs), or in How To Play, where they can also be turned off. The browser asks first. The alert says how long he slept and what he dreamed of, with the dream's picture, and opens the game. On an iPhone or iPad, alerts only work for the game on the home screen, so the button shows how to put it there first.
 
 These are the browsers' own push messages (`src/core/alerts.js`, the service worker `src/ui/sw.js`, `server/push.js`). The server encrypts each one for the one browser it goes to (RFC 8291, checked against the RFC's own example in the tests) and signs it with the site's key (RFC 8292), using nothing but node's crypto. The key pair is made from the database's secret, like the sessions, so there is nothing to set up. A browser that signed up under an old key signs up again by itself.
 
@@ -97,6 +97,14 @@ To see how far people get, the game counts a few steps: opening the page for the
 Only a number per step per day reaches the server, in the `counts` table (day, step, n). There is no address, no name, no cookie and nothing kept about the request. The browser keeps a short list under `squeekerant-counted` of what it has already counted, so each browser counts each step once (playing today once a day), and it sends what it has in one small request, so a visit wakes the database once at most. Browsers run by a program, test browsers included, and the Artifact preview never count.
 
 Read them at https://www.squeekerant.online/api/stats, a table of the last 14 days, or as JSON at `/api/counts`. Both are cached for five minutes. Anyone could send counts by hand, so they show trends and are never a reason to pay anyone. One address can send 60 an hour, counted in memory only, so a flood cannot keep the database awake all month.
+
+## A restaurant that goes with its wallet
+
+Once a wallet is connected, its restaurant is kept on the server as the save code the game makes (`saves`, one row per wallet: the code and when it was saved), so any device that connects the same wallet opens it. The server takes nothing but a code of that shape, up to 90,000 characters, and only for the wallet that signed in.
+
+Two devices never write over each other blindly. Each remembers the time of the copy it last saw (`squeekerant-cloud-base`) and a save only replaces that copy: if another device saved since, the server refuses, says what it holds, and the game takes that copy instead (for the same restaurant) or asks. A device with no restaurant opens the wallet's, even before the first card. A device whose restaurant is another one, or the same one it never synced, shows a card naming both with their levels: From my wallet, From this device or Decide later. Deciding later changes nothing until the next visit. Starting over takes the wallet's copy away too, and says so.
+
+The game hands its restaurant over at most every 5 minutes, and when the page is hidden. It is only a convenience: all numbers are still in the player's browser, so nothing here makes scores harder to forge.
 
 ## The leaderboard and wallets
 
@@ -141,7 +149,7 @@ The game itself needs nothing installed. The leaderboard's server needs `npm ins
 
 ## Going live
 
-`vercel deploy --prod` from this folder. `vercel.json` builds `public/index.html`, the only file visitors get, and serves `api/index.js` as one function for `/api/`, the picture links under `/p/` and his dreams under `/dreams`. The function carries `src` with it, for painting pictures and reading the wheel with the game's own code. `vercel.json` also holds the schedule that looks for his waking every 15 minutes. Schedules are in beta, and Vercel says a deploy that declares them fails if the team does not have them yet: without the `schedules` block, alerts still go out whenever a game sees his dream. `dist/vi` is only for testing and never goes up.
+`vercel deploy --prod` from this folder. `vercel.json` builds `public/index.html`, the only file visitors get, and serves `api/index.js` as one function for `/api/`, the picture links under `/p/` and his dreams under `/dreams`. The function carries `src` with it, for painting pictures and reading the wheel with the game's own code. `vercel.json` also holds the schedule that looks for his waking every 15 minutes. Schedules are in beta, and Vercel says a deploy that declares them fails if the team does not have them yet: without the `schedules` block, alerts still go out whenever a game sees his dream. `dist/vi` is only for testing and never goes up. The tables (`players`, `player_days`, `counts`, `pictures`, `push_subs`, `dreams`, `saves`) make themselves.
 
 The board needs a Postgres database, its address in the `DATABASE_URL` setting on Vercel, and one more deploy to pick it up. The tables make themselves. Until then the game says the board is not open yet, and everything else works.
 
@@ -157,7 +165,7 @@ The board needs a Postgres database, its address in the `DATABASE_URL` setting o
 
 ## Not built yet
 
-Real friends and saves that follow a wallet. Neighbours, their buildings and the callers at your shelf are local characters. Connecting needs a wallet in the browser, so a phone must open the page in its wallet app, and a smart contract wallet cannot sign in yet. Balance comes from a bot only and needs people to play it. Sound has not been heard on real speakers.
+Real friends. Neighbours, their buildings and the callers at your shelf are local characters. Connecting needs a wallet in the browser, so a phone must open the page in its wallet app, and a smart contract wallet cannot sign in yet. Balance comes from a bot only and needs people to play it. Sound has not been heard on real speakers.
 
 ## Credits and rules kept
 

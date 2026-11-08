@@ -3,6 +3,10 @@
   const { C, WORLD, el, img, btn, fmt, money } = WW;
   const E = WW.Engine;
   const SAVE_KEY = 'squeekerant-save-v2';
+  // The wallet's copy of the restaurant is brought up to date at most this often.
+  const CLOUD_EVERY = 5 * 60000;
+  const ALERTS_ASKED = 'squeekerant-alerts-asked';
+  const CLOUD_BASE = 'squeekerant-cloud-base';
   const DRAG_PX = 6;
   const HOLD_MS = 420;
   const AWAKE_MS = 20 * 60000;
@@ -183,6 +187,8 @@
           this.closeOverlay();
           this.toast(this.s && this.feed.mode === 'live' ? 'Wallet connected. Your restaurant is on the leaderboard.' : 'Wallet connected. Your restaurant joins the leaderboard as soon as it is on the real wheel.', 'good');
           this.walletChanged();
+          // With no restaurant here, the wallet's own may be waiting. It opens before the way in does.
+          if (!this.s) await this.syncWallet();
           if (this.landing.open) this.landing.enter();
         } catch (e) {
           this.walletWait = null;
@@ -250,12 +256,16 @@
       this.landing.draw();
       this.connectLive();
       this.connectCloud();
+      this.booted = true;
       this.last = performance.now();
       requestAnimationFrame((t) => this.frame(t));
       setInterval(() => this.tick(), 250);
       setInterval(() => this.autosave(), 20000);
       document.addEventListener('visibilitychange', () => {
-        if (document.hidden) this.autosave(true);
+        if (!document.hidden) return;
+        this.autosave(true);
+        // Leaving the page is a good moment to hand the restaurant to the wallet's copy.
+        if (this.cloudDirty) this.cloudPush(true, true);
       });
       window.addEventListener('pagehide', () => this.autosave(true));
       if (window.claude && window.claude.hot && window.claude.hot.snapshot) {
@@ -1031,6 +1041,158 @@
       E.moveToFeed(this.s, feed, t);
       this.dirty = true;
     }
+    // A restaurant goes with its wallet. Once a wallet is connected, the restaurant kept with it is looked for on the server,
+    // and this device's restaurant is kept there too, so any device that connects the same wallet carries on from it.
+    async syncWallet() {
+      const w = this.wallet;
+      if (!this.booted || !w.usable || !w.connected() || this.practice || this.elsewhere || this.syncing) return;
+      const who = w.address + w.token;
+      if (this.syncedFor === who || (this.syncRetryAt && Date.now() < this.syncRetryAt)) return;
+      this.syncing = true;
+      try {
+        const remote = await w.getSave();
+        if (w.address + w.token !== who || this.practice) return;
+        const base = this.cloudBase();
+        let theirs = null;
+        if (remote.code) {
+          try {
+            theirs = await WW.SaveCode.read(remote.code);
+            if (E.migrate(JSON.parse(JSON.stringify(theirs))).v !== 6) theirs = null;
+          } catch (e) {
+            theirs = null;
+          }
+        }
+        const mine = this.s;
+        this.syncedFor = who;
+        this.cloudHold = false;
+        if (!theirs) {
+          // Nothing usable kept yet, so this device's restaurant is what goes.
+          if (mine) await this.cloudPush(true, false, !!remote.code);
+        } else if (!mine) {
+          this.useRemote(theirs, remote.at);
+        } else if (mine.created === theirs.created && base > 0) {
+          // The same restaurant. What was kept after this device last saw it was saved by another device, and is further on.
+          if (remote.at > base) this.useRemote(theirs, remote.at);
+          else this.cloudBase(remote.at);
+        } else {
+          // Different restaurants, or the same one that this device never synced: only the player can say which goes.
+          this.askWhich(mine, theirs, remote.at);
+        }
+      } catch (e) {
+        this.syncRetryAt = Date.now() + 60000;
+      } finally {
+        this.syncing = false;
+      }
+    }
+    // The time of the copy this device last saw for this wallet, 0 when it has seen none. Given a time, it is written down.
+    cloudBase(at) {
+      const w = this.wallet.address ? this.wallet.address.toLowerCase() : '';
+      try {
+        if (at !== undefined) localStorage.setItem(CLOUD_BASE, JSON.stringify({ w, at }));
+        const kept = JSON.parse(localStorage.getItem(CLOUD_BASE));
+        return kept && kept.w === w && Number.isFinite(kept.at) ? kept.at : 0;
+      } catch (e) {
+        return at === undefined ? 0 : at;
+      }
+    }
+    cloudTick() {
+      if (!this.booted) return;
+      this.syncWallet();
+      if (this.cloudDirty) this.cloudPush(false);
+    }
+    // Hands this device's restaurant to the wallet's copy. At most every few minutes, so the database can rest.
+    async cloudPush(force, urgent, forced) {
+      const w = this.wallet;
+      if (!this.s || this.practice || this.elsewhere || this.cloudHold || this.pushing || !w.usable || !w.connected() || this.syncedFor !== w.address + w.token) return;
+      if (!force && Date.now() - (this.cloudAt || 0) < CLOUD_EVERY) return;
+      this.pushing = true;
+      this.cloudAt = Date.now();
+      try {
+        const code = await WW.SaveCode.make(this.s);
+        const out = await w.putSave(code, Date.now(), this.cloudBase(), forced === true, urgent);
+        // Another device saved later. This one looks at what it left, and takes it or asks.
+        if (out.kept) {
+          this.cloudDirty = false;
+          this.cloudBase(out.at);
+        } else this.syncedFor = null;
+      } catch (e) {
+        this.cloudAt = Date.now() - CLOUD_EVERY + 60000;
+      } finally {
+        this.pushing = false;
+      }
+    }
+    // The wallet's restaurant opens here, in place of whatever was open.
+    useRemote(save, at) {
+      this.visit = null;
+      this.queue = [];
+      document.getElementById('overlay').classList.remove('show');
+      this.useSave(save);
+      this.dirty = true;
+      this.autosave(true);
+      this.cloudDirty = false;
+      this.cloudAt = Date.now();
+      this.cloudBase(at);
+      this.count.once('wallet_save_loaded');
+      if (this.landing.open) this.landing.show();
+      else this.pumpQueue();
+      this.toast(`${this.s.shop} came with your wallet.`, 'good');
+    }
+    // This device and the wallet each have a restaurant, and they are not the same one. Only one can go with the wallet.
+    askWhich(mine, theirs, at) {
+      this.cloudHold = true;
+      const line = (s) => `${s.shop}, level ${s.level}`;
+      this.showTicket(
+        el('h2', null, 'Two restaurants'),
+        el('p', null, `Your wallet has ${line(theirs)}. This device has ${line(mine)}. Only one can go with your wallet.`),
+        el('p', { class: 'note', style: 'margin-top:6px' }, 'The one you do not pick is replaced. Make a save code first if you want to keep it.'),
+        el('p', { style: 'margin:8px 0 0;text-align:center' }, btn('Decide later', () => this.closeOverlay(), 'plain small')),
+        this.actions(
+          btn('From my wallet', () => {
+            this.cloudHold = false;
+            this.useRemote(theirs, at);
+          }, 'plain'),
+          btn('From this device', () => {
+            this.cloudHold = false;
+            this.closeOverlay();
+            this.cloudPush(true, false, true);
+          }, 'tomato')
+        )
+      );
+    }
+    // Once, after the first real guest: that is what a running hamster does for the restaurant, so an alert makes sense now.
+    offerAlerts() {
+      if (this.alertsAsked !== undefined) return;
+      try {
+        this.alertsAsked = !!localStorage.getItem(ALERTS_ASKED);
+      } catch (e) {
+        this.alertsAsked = true;
+      }
+      if (this.alertsAsked || !this.alerts || !this.alerts.offered()) {
+        this.alertsAsked = true;
+        return;
+      }
+      this.alertsAsked = true;
+      try {
+        localStorage.setItem(ALERTS_ASKED, '1');
+      } catch (e) {}
+      this.enqueue(() => this.showAlertOffer());
+      this.pumpQueue();
+    }
+    showAlertOffer() {
+      this.showTicket(
+        el('h2', null, 'Your first guest!'),
+        el('p', null, 'He is running, and your restaurant is serving. When he goes to sleep, nobody comes in until he runs again.'),
+        el('p', { class: 'note', style: 'margin-top:6px' }, 'An alert can tell you when he wakes up, with the dream he had.'),
+        this.actions(
+          btn('Not now', () => this.closeOverlay(), 'plain'),
+          btn('Tell me when he wakes up', () => {
+            this.closeOverlay();
+            this.alerts.turnOn();
+          }, 'tomato')
+        )
+      );
+    }
+
     // Saves
 
     loadLocal() {
@@ -1050,6 +1212,7 @@
       try {
         localStorage.setItem(SAVE_KEY, raw);
       } catch (e) {}
+      this.cloudDirty = true;
       if (this.cloudDoc && !this.cloudBusy) {
         this.cloudBusy = true;
         this.cloudDoc
@@ -1104,6 +1267,7 @@
 
     tick() {
       if (this.elsewhere) return;
+      this.cloudTick();
       if (this.landing.open) {
         this.live = this.feed.live(this.now());
         this.tickN++;
@@ -1115,7 +1279,10 @@
       const t = this.now();
       this.tickN++;
       const adv = E.advance(s, this.feed, t);
-      if (s.stats.served > 0 && this.feed.mode === 'live' && !this.practice) this.count.once('first_guest');
+      if (s.stats.served > 0 && this.feed.mode === 'live' && !this.practice) {
+        this.count.once('first_guest');
+        this.offerAlerts();
+      }
       if (adv) {
         const rep = E.takeReport(s);
         this.handleReport(rep, adv.steps >= 18);
@@ -2161,7 +2328,8 @@
     }
 
     confirmReset() {
-      this.showTicket(el('h2', null, 'Start over?'), el('p', null, 'This deletes your restaurant, guest book and recipes on this device.'), this.actions(btn('Keep it', () => this.closeOverlay(), 'plain'), btn('Delete and start over', () => this.reset(), 'tomato')));
+      const kept = this.wallet.connected() && this.syncedFor === this.wallet.address + this.wallet.token;
+      this.showTicket(el('h2', null, 'Start over?'), el('p', null, kept ? 'This deletes your restaurant, guest book and recipes on this device and with your wallet.' : 'This deletes your restaurant, guest book and recipes on this device.'), this.actions(btn('Keep it', () => this.closeOverlay(), 'plain'), btn('Delete and start over', () => this.reset(), 'tomato')));
     }
     reset() {
       if (this.practice) return;
@@ -2169,6 +2337,10 @@
         localStorage.removeItem(SAVE_KEY);
       } catch (e) {}
       if (this.cloudDoc) this.cloudDoc.delete().catch(() => {});
+      // Starting over takes the wallet's copy away too, or the next device would bring the old one back.
+      if (this.wallet.connected() && this.syncedFor === this.wallet.address + this.wallet.token) this.wallet.putSave(null, Date.now()).catch(() => {});
+      this.cloudDirty = false;
+      this.cloudBase(0);
       this.s = null;
       this.visit = null;
       // Cards still waiting belong to the restaurant that is gone.

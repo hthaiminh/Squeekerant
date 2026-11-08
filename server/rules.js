@@ -28,7 +28,7 @@ function xpCeiling(now) {
 
 // What the game may count, in the order a person gets there, with what each one means. Only these reach the database.
 // The practice kitchen's steps follow the lesson in src/ui/practice.js. A test keeps them equal.
-const LESSON_STEPS = ['wheel', 'stove', 'stoveWait', 'run', 'guests', 'till', 'wok', 'wokWait', 'line', 'pot', 'sleep', 'night', 'dream', 'door', 'tree', 'market', 'board', 'shop', 'ranks', 'street', 'house', 'clean', 'trade', 'arrange', 'recipes', 'howto'];
+const LESSON_STEPS = ['wheel', 'stove', 'stoveWait', 'run', 'guests', 'till', 'sleep', 'night', 'dream', 'market', 'howto'];
 const COUNT_LABELS = [
   ['first_visit', 'Opened the page for the first time'],
   ['connect_pressed', 'Looked at connecting a wallet'],
@@ -57,10 +57,24 @@ const COUNT_LABELS = [
   ['install_pressed', 'Pressed install'],
   ['installed', 'Installed the game as an app'],
   ['alerts_on', 'Turned on wake up alerts'],
+  ['wallet_save_loaded', 'Opened a restaurant that came with a wallet'],
   ['alert_opened', 'Opened the game from a wake up alert'],
 ];
 const COUNT_STEPS = new Set(COUNT_LABELS.map(([step]) => step));
 const MOST_STEPS = 60;
+
+// A restaurant kept with a wallet is the save code the game makes, and nothing else.
+const MOST_SAVE_CODE = 90000;
+const SAVE_CODE = /^SQK[ZP]1\.[A-Za-z0-9_-]+\.[0-9a-z]+$/;
+// Gives back the clean code, the time it was saved, and what it was based on, or an error to send back. A time in the future is taken as now.
+function cleanSaveCode(body, now) {
+  const b = body || {};
+  if (typeof b.code !== 'string' || b.code.length > MOST_SAVE_CODE || !SAVE_CODE.test(b.code)) return { error: 'That is not a save code.' };
+  if (!Number.isSafeInteger(b.at) || b.at < 1700000000000) return { error: 'That save has no time.' };
+  // base is the time of the copy this device last saw, 0 when it saw none. A device that is behind cannot replace a newer one, unless it is told to (force).
+  if (b.base !== undefined && (!Number.isSafeInteger(b.base) || b.base < 0)) return { error: 'That save has no base.' };
+  return { code: b.code, at: Math.min(b.at, now), base: b.base || 0, force: b.force === true };
+}
 
 // One request may carry several steps. Each counts once, and anything else is ignored rather than stored.
 function cleanSteps(body) {
@@ -108,4 +122,6 @@ function cleanScore(body, now) {
 module.exports = {
   COUNT_LABELS,
   LESSON_STEPS,
+  MOST_SAVE_CODE,
+  cleanSaveCode,
   cleanSteps, xpNeed, totalXp, xpCeiling, cleanName, cleanScore, LAUNCH, MAX_LEVEL, MAX_HOUSE };

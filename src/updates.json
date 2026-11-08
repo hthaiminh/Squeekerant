@@ -1,5 +1,15 @@
 [
   {
+    "v": "0.0.11",
+    "date": "2026-11-08",
+    "title": "Your restaurant, anywhere",
+    "items": [
+      { "big": true, "kind": "new", "title": "Your restaurant follows your wallet", "text": "Connect the same wallet on another phone or computer and your restaurant opens there, as far along as you left it. It is kept up to date while you play. If two different restaurants meet, the game asks which one goes with your wallet, and never replaces one without telling you." },
+      { "big": true, "kind": "better", "title": "A shorter practice kitchen", "text": "From 26 steps down to 11: the wheel, the stove, his waking, guests and the till, his sleep and the dream, and the market. The stove is quicker too. How To Play has the rest." },
+      { "kind": "better", "text": "After your first real guest the game offers the wake up alert, once." }
+    ]
+  },
+  {
     "v": "0.0.10",
     "date": "2026-11-07",
     "title": "Good morning",

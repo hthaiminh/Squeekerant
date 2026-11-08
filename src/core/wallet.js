@@ -183,6 +183,27 @@
       if (elapsed < (newLevel ? LEVEL_EVERY : SCORE_EVERY)) return;
       this.send(score, key);
     }
+    // The restaurant kept with this wallet. A session that ran out is the same as for the score: connecting again signs a new one.
+    async cloud(run) {
+      try {
+        return await run();
+      } catch (e) {
+        if (e.status === 401) {
+          this.token = null;
+          this.keep();
+          this.expired = true;
+          this.changed();
+        }
+        throw e;
+      }
+    }
+    getSave() {
+      return this.cloud(() => askJson('/api/save', { headers: { authorization: 'Bearer ' + this.token } }));
+    }
+    // code null takes it away.
+    putSave(code, at, base, force, keepalive) {
+      return this.cloud(() => askJson('/api/save', { method: 'POST', keepalive: !!keepalive, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + this.token }, body: JSON.stringify(code === null ? { code } : { code, at, base, force: !!force }) }));
+    }
     async send(score, key) {
       this.sending = true;
       this.sentAt = Date.now();

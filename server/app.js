@@ -1,7 +1,7 @@
 // The small server behind the leaderboard: proving you own a wallet, taking a score, and reading the board.
 // Signing in only ever asks the wallet to sign a message. There is no fee and no transaction.
 const crypto = require('crypto');
-const { cleanScore, cleanSteps, COUNT_LABELS } = require('./rules');
+const { cleanScore, cleanSteps, cleanSaveCode, COUNT_LABELS } = require('./rules');
 const push = require('./push');
 const { createWake } = require('./wake');
 
@@ -23,6 +23,7 @@ const PICTURES_PER_HOUR = 20;
 const PICTURES_PER_DAY = 2000;
 const COUNTS_PER_HOUR = 60;
 const ALERT_CHANGES_PER_HOUR = 30;
+const SAVES_PER_HOUR = 40;
 const CHECKS_PER_HOUR = 60;
 const HOUR_MS = 3600000;
 // /dreams, a dream's own page, and its picture.
@@ -111,6 +112,12 @@ function createApp({ store, secret, local = false, clock = Date.now, wheel = req
   const tooManyCounts = limiter(COUNTS_PER_HOUR);
   const tooManyAlertChanges = limiter(ALERT_CHANGES_PER_HOUR);
   const tooManyChecks = limiter(CHECKS_PER_HOUR);
+  const tooManySaves = limiter(SAVES_PER_HOUR);
+  const walletOf = (headers) => {
+    const session = read('session', String(headers.authorization || '').replace(/^Bearer /, ''));
+    if (!session) throw new Refusal(401, 'Connect your wallet again.');
+    return String(session.a).toLowerCase();
+  };
   const pictures = () => require('./picture');
   const dreams = () => require('./dreams');
   const canKeepPictures = () => store.open && typeof store.savePicture === 'function';
@@ -238,6 +245,27 @@ function createApp({ store, secret, local = false, clock = Date.now, wheel = req
       return { json: { ok: true, id, url: `${originOf(headers)}/p/${id}` } };
     },
     // Wake up alerts. A browser gets the site's public key, then hands over where its push service takes messages for it.
+    // The restaurant that goes with a wallet. Only its owner, signed in, can read or change it.
+    'GET /api/save': async ({ headers }) => {
+      needsBoard();
+      const wallet = walletOf(headers);
+      const found = await store.getSave(wallet);
+      return { json: found ? { code: found.code, at: found.at } : { code: null } };
+    },
+    // code: null takes it away, which is what starting over does.
+    'POST /api/save': async ({ body, headers }) => {
+      needsBoard();
+      const wallet = walletOf(headers);
+      if (tooManySaves(headers)) throw new Refusal(429, 'That is a lot of saves for one hour.');
+      if (body && body.code === null) {
+        await store.dropSave(wallet);
+        return { json: { ok: true, kept: true } };
+      }
+      const save = cleanSaveCode(body, clock());
+      if (save.error) throw new Refusal(400, save.error);
+      const out = await store.putSave(wallet, save.code, save.at, clock(), save.base, save.force);
+      return { json: { ok: true, kept: out.kept, at: out.at } };
+    },
     'GET /api/push/key': async () => ({ json: { key: pushKeys.publicText }, cache: KEY_CACHE }),
     'POST /api/push/subscribe': async ({ body, headers }) => {
       hostOf(headers);
