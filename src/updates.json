@@ -1,5 +1,15 @@
 [
   {
+    "v": "0.0.12",
+    "date": "2026-11-09",
+    "title": "Coming back",
+    "items": [
+      { "big": true, "kind": "new", "title": "Welcome back", "text": "When you come back to a restaurant, the welcome page now says what the wheel did while you were away: how many passes he made and about how many guests that is." },
+      { "kind": "better", "text": "The practice kitchen opens the stove's dish list for you if you have not found the stove after a few seconds." },
+      { "kind": "better", "text": "Each dream's page has Copy post and Save picture, so sharing the morning's dream takes seconds." }
+    ]
+  },
+  {
     "v": "0.0.11",
     "date": "2026-11-08",
     "title": "Your restaurant, anywhere",

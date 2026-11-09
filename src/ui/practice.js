@@ -120,7 +120,17 @@
           id: 'stove',
           title: 'Cook first',
           body: 'Guests can only eat what is on the counter, and yours is empty. The stove runs on plain time, whatever he is doing.',
-          enter: () => f.setRate(FAST),
+          enter: () => {
+            f.setRate(FAST);
+            this.stoveAt = performance.now();
+            this.stoveOpened = false;
+          },
+          // Most people who stopped here never found the stove. After a few seconds the dish list opens by itself.
+          every: () => {
+            if (this.stoveOpened || performance.now() - this.stoveAt < 3000) return;
+            this.stoveOpened = true;
+            if (!this.picking('stove')) this.game.panels.open('kitchen', { station: this.station('stove') });
+          },
         }),
         {
           id: 'stoveWait',

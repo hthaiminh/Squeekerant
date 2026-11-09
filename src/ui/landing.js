@@ -144,8 +144,22 @@
       this.status.replaceChildren(...(words ? [el('span', { class: 'dot', style: `background:${dots}` }), el('span', null, words)] : []));
       // Asleep, which is most of the day: an empty restaurant is normal, and when he last ran says roughly when guests come.
       const run = state === 'quiet' ? this.lastRun() : null;
-      this.sleep.textContent = state === 'quiet' ? [WW.tr('Guests come when he runs, even with the game closed.'), run ? WW.tr(this.runWords(run)) : ''].join(' ').trim() : '';
+      const since = this.sinceWords();
+      this.sleep.textContent = [since ? WW.tr(since) : '', state === 'quiet' ? WW.tr('Guests come when he runs, even with the game closed.') : '', state === 'quiet' && run ? WW.tr(this.runWords(run)) : ''].filter(Boolean).join(' ');
       this.draw();
+    }
+    // For someone coming back: what the wheel did while they were away, from the rounds really read.
+    sinceWords() {
+      const g = this.game;
+      const s = g.s;
+      const f = g.feed;
+      if (!s || g.practice || f.mode !== 'live') return '';
+      const from = s.clock.round + 1;
+      const to = f.settled(g.now());
+      if (to < from || !f.knows(from, to)) return '';
+      const work = f.workBetween(from, to);
+      if (!(work >= WW.CFG.WORK_PER_GUEST)) return '';
+      return `Since you left, he made ${work.toLocaleString('en-US')} wheel passes, enough for about ${Math.floor(work / WW.CFG.WORK_PER_GUEST).toLocaleString('en-US')} guests.`;
     }
     // His latest run in the rounds read: the last round with passes, back to the first one with no rest of an hour or more before it.
     lastRun() {

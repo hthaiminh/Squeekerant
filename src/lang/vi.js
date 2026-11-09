@@ -768,6 +768,7 @@
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const PATTERNS = [
     // The welcome page while he sleeps, with when he last ran.
+    [/^Since you left, he made ([\d,]+) wheel passes, enough for about ([\d,]+) guests\.$/, 'Từ lúc bạn đi, cậu ấy đã quay $1 vòng, đủ cho khoảng $2 khách.'],
     [/^He last ran (today|yesterday|on (\d+) ([A-Z][a-z]+)), from about (\d\d:\d\d) to (\d\d:\d\d)\.$/, (m) => `Lần chạy gần nhất ${m[1] === 'today' ? 'hôm nay' : m[1] === 'yesterday' ? 'hôm qua' : `ngày ${m[2]} tháng ${MONTH_NAMES.indexOf(m[3]) + 1}`}, khoảng ${m[4]} đến ${m[5]}.`],
     // His sleep, the dream it is heading for, and the share picture.
     [/^Dream Dish waiting, golden in ([\d.]+) h$/, 'Đã có Món Trong Mơ, thành vàng sau $1 giờ'],

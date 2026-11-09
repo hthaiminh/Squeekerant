@@ -953,6 +953,13 @@ test('the dreams page lists every dream with what anyone needs to check it, and 
   assert.ok(page.html.includes('<meta property="og:image" content="https://www.squeekerant.online/dreams/2026-11-07-479.png">'));
   assert.ok(page.html.includes('<meta name="twitter:card" content="summary_large_image">'));
   assert.ok(page.html.includes('slept 10.7 hours'));
+  // A post takes seconds: its words with the dream's own link, and its picture to save.
+  const copy = /data-copy="([^"]+)"/.exec(page.html);
+  assert.ok(copy, 'Copy post is on the dream page');
+  const words = copy[1].replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+  assert.ok(words.includes("@squeekchain's Squeektoshi, a real hamster, slept 10.7 hours and dreamed of") && words.endsWith('\nhttps://www.squeekerant.online/dreams/2026-11-07-479'), words);
+  assert.ok(page.html.includes('href="/dreams/2026-11-07-479.png" download="squeektoshi-dream-2026-11-07-479.png">Save picture'));
+  assert.ok(html.includes('data-copy=') && html.includes('Save picture'), 'and on the list, for the newest dream');
   const png = await get('/dreams/2026-11-07-479.png');
   assert.equal(png.type, 'image/png');
   assert.equal(png.body.readUInt32BE(16), 1200);

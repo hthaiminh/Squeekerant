@@ -197,6 +197,10 @@ function head(title, about, url, image, origin) {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${escape(title)}</title><meta name="description" content="${escape(about)}"><meta property="og:type" content="website"><meta property="og:url" content="${origin}${url}"><meta property="og:site_name" content="Squeekerant"><meta property="og:title" content="${escape(title)}"><meta property="og:description" content="${escape(about)}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><link rel="icon" type="image/png" href="data:image/png;base64,${icon}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+20&family=Pixelify+Sans:wght@600;700&family=VT323&display=swap"><style>${STYLE}</style></head>`;
 }
 // Times are written in UTC on the server. The page then shows them in the reader's own time.
+// The post's words with the dream's own link, and its picture to save, so a morning post takes seconds.
+const COPY = '<script>for(const b of document.querySelectorAll("[data-copy]")){b.addEventListener("click",async()=>{const t=b.dataset.copy;try{await navigator.clipboard.writeText(t);const o=b.textContent;b.textContent="Copied";setTimeout(()=>{b.textContent=o;},1800);}catch(e){window.prompt("Copy this post:",t);}});}</script>';
+const postTools = (d, origin) => `<a class="btn plain" href="/dreams/${idOf(d)}.png" download="squeektoshi-dream-${idOf(d)}.png">Save picture</a><button class="btn plain" type="button" data-copy="${escape(`${postText(d)}
+${origin}/dreams/${idOf(d)}`)}">Copy post</button>`;
 const LOCAL = '<script>for(const t of document.querySelectorAll("time[data-local]")){const d=new Date(t.dateTime);if(!isNaN(d))t.textContent=d.toLocaleString(undefined,{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});}</script>';
 const when = (d) => `<time datetime="${new Date(d.woke).toISOString()}" data-local>${dateText(new Date(d.woke).toISOString().slice(0, 10))}, ${clock(d.woke)} UTC</time>`;
 
@@ -229,12 +233,12 @@ async function listPage(rows, origin) {
 <body><div class="page">
 <header class="top"><a href="/" aria-label="Squeekerant"><img src="data:image/png;base64,${logo}" alt="Squeekerant" width="324" height="78"></a><h1>His dreams</h1><p>Every time Squeektoshi wakes up from a long sleep, every restaurant in the game gets the same Dream Dish. Here is each one, newest first.</p><a class="btn" href="/">Play Squeekerant</a></header>
 <main>
-${latest ? `<div class="hero"><a href="/dreams/${idOf(latest)}"><img src="/dreams/${idOf(latest)}.png" width="1200" height="630" alt="${escape(dish(latest).n)}, the latest dream"></a></div>` : ''}
+${latest ? `<div class="hero"><a href="/dreams/${idOf(latest)}"><img src="/dreams/${idOf(latest)}.png" width="1200" height="630" alt="${escape(dish(latest).n)}, the latest dream"></a><p>${postTools(latest, origin)}</p></div>` : ''}
 ${items.length ? items.join('\n') : '<p class="dream">No dreams yet. His first long sleep will bring the first one.</p>'}
 ${howTo(rows)}
 </main>
 <footer><p>A tiny restaurant run by a real hamster. <a href="/">Play Squeekerant</a> &middot; <a href="/updates">What's new</a></p></footer>
-</div>${LOCAL}</body></html>
+</div>${LOCAL}${COPY}</body></html>
 `;
 }
 
@@ -246,8 +250,9 @@ function dreamPage(d, origin) {
 <body><div class="page">
 <main class="hero"><img src="/dreams/${idOf(d)}.png" width="1200" height="630" alt="${escape(def.n)}: Squeektoshi slept ${hours(d)} hours and dreamed of it">
 <p>${when(d)}. Round ${d.round}, hash <code>${escape(d.hash)}</code>.</p>
-<p><a class="btn" href="/">Play Squeekerant</a><a class="btn plain" href="/dreams">Every dream</a><a class="btn plain" href="${escape(postLink(d, origin))}" target="_blank" rel="noopener noreferrer">Post on X</a></p></main>
-</div>${LOCAL}</body></html>
+<p><a class="btn" href="/">Play Squeekerant</a><a class="btn plain" href="/dreams">Every dream</a><a class="btn plain" href="${escape(postLink(d, origin))}" target="_blank" rel="noopener noreferrer">Post on X</a></p>
+<p>${postTools(d, origin)}</p></main>
+</div>${LOCAL}${COPY}</body></html>
 `;
 }
 
